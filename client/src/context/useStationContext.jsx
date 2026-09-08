@@ -39,9 +39,11 @@ export function StationProvider({ children }) {
 
   // 2. Connect to WebSocket
   useEffect(() => {
-    // In local Vite dev (port 3000), connect to backend port 4000. In production, use current origin.
+    // Connect to custom backend URL if specified (e.g. Vercel deployment pointing to Render),
+    // or port 4000 in local Vite dev (port 3000), or current origin when fullstack served.
     const socketHost =
-      window.location.port === '3000' ? 'http://localhost:4000' : window.location.origin;
+      import.meta.env.VITE_BACKEND_URL ||
+      (window.location.port === '3000' ? 'http://localhost:4000' : window.location.origin);
     const socket = io(socketHost, {
       reconnection: true,
       reconnectionDelay: 1500,

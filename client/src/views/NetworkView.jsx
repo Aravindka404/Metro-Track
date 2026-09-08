@@ -197,7 +197,8 @@ export function NetworkView() {
     setIsLoadingSchedule(true);
     const originId = currentStation.id;
     const destId = destinationStation.id;
-    const url = `/api/plan?origin=${originId}&destination=${destId}&time=${selectedTime || ''}`;
+    const apiBase = import.meta.env.VITE_BACKEND_URL || '';
+    const url = `${apiBase}/api/plan?origin=${originId}&destination=${destId}&time=${selectedTime || ''}`;
 
     fetch(url)
       .then((res) => res.json())
