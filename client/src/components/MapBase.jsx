@@ -74,6 +74,8 @@ export function MapBase({
   onViewStateChange,
   children,
   selectedTrainId = null,
+  recommendedTrainId = null,
+  routeHighlight = null, // { originId, destinationId }
   onSelectTrain,
   onSelectStation,
   padding,
@@ -108,6 +110,101 @@ export function MapBase({
       paint: {
         'line-color': '#00A896',
         'line-width': 2.2,
+        'line-opacity': 1,
+      },
+    }),
+    []
+  );
+
+  // Active Journey Segment Slice (Origin to Destination)
+  const highlightedRouteGeoJSON = useMemo(() => {
+    if (
+      !routeHighlight ||
+      !routeHighlight.originId ||
+      !routeHighlight.destinationId ||
+      !tracksGeoJSON ||
+      !stations ||
+      stations.length === 0
+    ) {
+      return null;
+    }
+
+    const normOrigin = routeHighlight.originId.toUpperCase() === 'TRPN' ? 'TPHT' : routeHighlight.originId.toUpperCase();
+    const normDest = routeHighlight.destinationId.toUpperCase() === 'TRPN' ? 'TPHT' : routeHighlight.destinationId.toUpperCase();
+
+    const originStation = stations.find(
+      (s) => s.id.toUpperCase() === normOrigin || s.id.toUpperCase() === routeHighlight.originId.toUpperCase()
+    );
+    const destStation = stations.find(
+      (s) => s.id.toUpperCase() === normDest || s.id.toUpperCase() === routeHighlight.destinationId.toUpperCase()
+    );
+
+    if (!originStation || !destStation || !tracksGeoJSON.features || !tracksGeoJSON.features[0]) {
+      return null;
+    }
+
+    const coords = tracksGeoJSON.features[0].geometry.coordinates;
+    if (!coords || coords.length === 0) return null;
+
+    const findClosestIdx = (pt) => {
+      let minD = Infinity;
+      let best = 0;
+      for (let i = 0; i < coords.length; i++) {
+        const c = coords[i];
+        const d = (c[0] - pt[0]) ** 2 + (c[1] - pt[1]) ** 2;
+        if (d < minD) {
+          minD = d;
+          best = i;
+        }
+      }
+      return best;
+    };
+
+    const idxA = findClosestIdx([originStation.lon, originStation.lat]);
+    const idxB = findClosestIdx([destStation.lon, destStation.lat]);
+    const startIdx = Math.min(idxA, idxB);
+    const endIdx = Math.max(idxA, idxB);
+
+    const sliced = coords.slice(startIdx, endIdx + 1);
+    if (sliced.length < 2) return null;
+
+    return {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: sliced,
+          },
+        },
+      ],
+    };
+  }, [routeHighlight, tracksGeoJSON, stations]);
+
+  const routeHighlightGlowLayer = useMemo(
+    () => ({
+      id: 'kmrl-route-highlight-glow',
+      type: 'line',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#06B6D4',
+        'line-width': 10,
+        'line-opacity': 0.75,
+        'line-blur': 4,
+      },
+    }),
+    []
+  );
+
+  const routeHighlightCoreLayer = useMemo(
+    () => ({
+      id: 'kmrl-route-highlight-core',
+      type: 'line',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#38BDF8',
+        'line-width': 3.5,
         'line-opacity': 1,
       },
     }),
@@ -151,6 +248,14 @@ export function MapBase({
           <Source id="kmrl-tracks-source" type="geojson" data={tracksGeoJSON}>
             <Layer {...trackGlowLayer} />
             <Layer {...trackCoreLayer} />
+          </Source>
+        )}
+
+        {/* Active Journey Route Highlight Trace */}
+        {highlightedRouteGeoJSON && (
+          <Source id="kmrl-highlighted-route-source" type="geojson" data={highlightedRouteGeoJSON}>
+            <Layer {...routeHighlightGlowLayer} />
+            <Layer {...routeHighlightCoreLayer} />
           </Source>
         )}
 
@@ -203,6 +308,7 @@ export function MapBase({
             key={train.id}
             train={train}
             isSelected={selectedTrainId === train.id}
+            isRecommended={recommendedTrainId === train.id}
             onSelect={onSelectTrain}
           />
         ))}

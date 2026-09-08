@@ -235,6 +235,7 @@ export class GTFSEngine {
         let speedKmH = 0;
         let isDwelling = false;
 
+        let curStopIdx = 0;
         for (let i = 0; i < stList.length; i++) {
           const s = stList[i];
 
@@ -243,6 +244,7 @@ export class GTFSEngine {
             isDwelling = true;
             curStop = s;
             nextStop = stList[i + 1] || s;
+            curStopIdx = i + 1;
             currentDist = s.dist;
             speedKmH = 0;
             break;
@@ -254,6 +256,7 @@ export class GTFSEngine {
             if (effectiveSec > s.dep_sec && effectiveSec < nextS.arr_sec) {
               curStop = s;
               nextStop = nextS;
+              curStopIdx = i + 1;
               const durationSec = nextS.arr_sec - s.dep_sec;
               const elapsedSec = effectiveSec - s.dep_sec;
               const ratio = durationSec > 0 ? elapsedSec / durationSec : 0;
@@ -286,6 +289,13 @@ export class GTFSEngine {
             const trainNumber = tripId.replace(/^(WK_|WE_)/, '');
             const trainCode = `KMRL-${trip.direction_id === 0 ? 'S' : 'N'}${trainNumber.padStart(2, '0')}`;
 
+            const remainingStops = stList.slice(curStopIdx).map((s) => ({
+              stopId: s.stop_id,
+              stopName: this.stops.get(s.stop_id)?.name || s.stop_id,
+              etaSeconds: Math.max(0, s.arr_sec - effectiveSec),
+              distanceMeters: Math.max(0, Math.round((s.dist - currentDist) * 1000)),
+            }));
+
             activeTrains.push({
               id: trainCode,
               tripId: trip.trip_id,
@@ -302,6 +312,7 @@ export class GTFSEngine {
               nextStationId: nextStop.stop_id,
               distanceToNextMeters: distRemainingMeters,
               etaSeconds,
+              remainingStops,
               status: 'On Time',
               progress: parseFloat(((currentDist / stList[stList.length - 1].dist) * 100).toFixed(1)),
             });

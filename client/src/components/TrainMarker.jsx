@@ -3,7 +3,7 @@ import { Marker } from 'react-map-gl/maplibre';
 import { motion, useSpring } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
-export function TrainMarker({ train, isSelected = false, onSelect }) {
+export function TrainMarker({ train, isSelected = false, isRecommended = false, onSelect }) {
   const navigate = useNavigate();
 
   // Mathematical spring interpolation for coordinates
@@ -54,18 +54,25 @@ export function TrainMarker({ train, isSelected = false, onSelect }) {
         onClick={handleClick}
         className="group relative flex items-center justify-center cursor-pointer select-none"
       >
+        {/* Recommended Train Target Indicator */}
+        {isRecommended && (
+          <div className="absolute -inset-1.5 rounded-full bg-cyan-400/30 animate-ping pointer-events-none" />
+        )}
+
         {/* Schematic Circuit Unit Marker */}
         <motion.div
           animate={{
             rotate: train.bearing || 0,
-            scale: isSelected ? 1.25 : 1.0,
+            scale: isSelected || isRecommended ? 1.25 : 1.0,
           }}
           transition={{ type: 'spring', stiffness: 120, damping: 15 }}
           className="relative flex items-center justify-center"
         >
           <div
-            className={`w-8 h-3.5 rounded-full flex items-center justify-between px-1 transition-colors ${
-              isSelected
+            className={`w-8 h-3.5 rounded-full flex items-center justify-between px-1 transition-all ${
+              isRecommended
+                ? 'bg-cyan-500 ring-2 ring-white shadow-[0_0_12px_rgba(6,182,212,0.9)]'
+                : isSelected
                 ? 'bg-[#00A896] ring-1 ring-white shadow-[0_0_8px_rgba(0,168,150,0.8)]'
                 : 'bg-[#00A896] border border-white/20 hover:border-white/60'
             }`}
