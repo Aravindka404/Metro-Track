@@ -216,15 +216,6 @@ export function MapBase({
       {/* Blueprint Precision Grid Overlay */}
       <div className="absolute inset-0 pointer-events-none blueprint-grid-overlay z-0 opacity-80" />
 
-      {/* Subtle CAD Coordinate Markings */}
-      <div className="absolute bottom-4 left-6 pointer-events-none z-10 hidden md:flex items-center gap-4 font-mono text-[9px] text-slate-600 tracking-widest uppercase select-none">
-        <span>GRID: 32PX CAD</span>
-        <span>•</span>
-        <span>BOUNDS: [76.25°E, 9.90°N] — [76.40°E, 10.15°N]</span>
-        <span>•</span>
-        <span>DATUM: WGS84</span>
-      </div>
-
       <Map
         ref={mapRef}
         {...(viewState || DEFAULT_CENTER)}
