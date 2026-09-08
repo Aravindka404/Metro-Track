@@ -330,6 +330,87 @@ export class GTFSEngine {
     };
   }
 
+  getScheduledDepartures(originId, destId = null, timeStr = null, limit = 4) {
+    if (!this.isLoaded || !originId) return [];
+
+    const normOrigin = originId.toUpperCase() === 'TRPN' ? 'TPHT' : originId.toUpperCase();
+    const normDest = destId ? (destId.toUpperCase() === 'TRPN' ? 'TPHT' : destId.toUpperCase()) : null;
+
+    let targetSec;
+    if (timeStr && timeStr.includes(':')) {
+      const [hh, mm] = timeStr.split(':').map(Number);
+      targetSec = hh * 3600 + mm * 60;
+    } else {
+      const now = new Date();
+      const istTimeStr = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour12: false,
+      });
+      const [hh, mm, ss] = istTimeStr.split(':').map(Number);
+      targetSec = hh * 3600 + mm * 60 + ss;
+    }
+
+    if (targetSec < 6 * 3600 || targetSec > 22.5 * 3600) {
+      targetSec = 9.5 * 3600 + (targetSec % (4 * 3600));
+    }
+
+    const now = new Date();
+    const istDay = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short',
+    }).format(now);
+    const expectedService = istDay === 'Sun' ? 'WE' : 'WK';
+
+    const matches = [];
+
+    for (const [tripId, stList] of this.stopTimesByTrip.entries()) {
+      const trip = this.trips.get(tripId);
+      if (!trip || trip.service_id !== expectedService) continue;
+
+      const oIdx = stList.findIndex((s) => s.stop_id === normOrigin);
+      if (oIdx === -1) continue;
+      const oStop = stList[oIdx];
+
+      let dStop = null;
+      if (normDest) {
+        const dIdx = stList.findIndex((s) => s.stop_id === normDest);
+        if (dIdx <= oIdx) continue;
+        dStop = stList[dIdx];
+      }
+
+      if (oStop.dep_sec >= targetSec) {
+        const trainNumber = tripId.replace(/^(WK_|WE_)/, '');
+        const trainCode = `KMRL-${trip.direction_id === 0 ? 'S' : 'N'}${trainNumber.padStart(2, '0')}`;
+        const rideMinutes = dStop ? Math.round((dStop.arr_sec - oStop.dep_sec) / 60) : null;
+        const etaFromTarget = oStop.dep_sec - targetSec;
+
+        const format12h = (sec) => {
+          const h = Math.floor(sec / 3600) % 24;
+          const m = Math.floor((sec % 3600) / 60);
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const h12 = h % 12 || 12;
+          return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+        };
+
+        matches.push({
+          trainId: trainCode,
+          tripId,
+          directionId: trip.direction_id,
+          depSec: oStop.dep_sec,
+          depTime: format12h(oStop.dep_sec),
+          arrTime: dStop ? format12h(dStop.arr_sec) : null,
+          rideMinutes,
+          etaSeconds: etaFromTarget,
+          originName: this.stops.get(normOrigin)?.name || normOrigin,
+          destName: normDest ? (this.stops.get(normDest)?.name || normDest) : null,
+        });
+      }
+    }
+
+    matches.sort((a, b) => a.depSec - b.depSec);
+    return matches.slice(0, limit);
+  }
+
   getStationsGeoJSON() {
     const features = Array.from(this.stops.values()).map((s) => ({
       type: 'Feature',

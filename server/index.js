@@ -58,6 +58,17 @@ app.get('/api/stations', (req, res) => {
   res.json(stationsGeoJSON);
 });
 
+app.get('/api/plan', (req, res) => {
+  const { origin, destination, time } = req.query;
+  const departures = engine.getScheduledDepartures(origin, destination, time, 4);
+  res.json({
+    origin,
+    destination,
+    queryTime: time || 'now',
+    departures,
+  });
+});
+
 // Serve static client production build if available
 const CLIENT_DIST = path.resolve(__dirname, '../client/dist');
 if (fs.existsSync(CLIENT_DIST)) {
