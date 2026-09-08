@@ -453,7 +453,7 @@ export function NetworkView() {
       <header className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-20 flex items-center justify-between pointer-events-none gap-2">
         <div className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-white/10 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-2.5 sm:gap-3 shadow-lg">
           <span className="font-sans text-xs font-extrabold tracking-wider text-white uppercase">
-            KOCHI METRO
+            KOCHI METRO RADAR
           </span>
           <div className="h-3 w-[1px] bg-white/15" />
           <span className="font-sans text-xs text-slate-300 font-medium">

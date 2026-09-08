@@ -40,7 +40,7 @@ const stationsGeoJSON = JSON.parse(
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    system: 'Kochi Metro 3D Real-Time Backend',
+    system: 'Kochi Metro Radar Backend',
     time: new Date().toISOString(),
   });
 });
@@ -108,7 +108,7 @@ setInterval(() => {
 
 server.listen(PORT, () => {
   console.log(`===================================================`);
-  console.log(` Kochi Metro 3D Real-Time Backend Server Running `);
+  console.log(`     Kochi Metro Radar Server Running            `);
   console.log(` Port: ${PORT}`);
   console.log(` REST API: http://localhost:${PORT}/api/health`);
   console.log(` WebSocket: ws://localhost:${PORT}`);

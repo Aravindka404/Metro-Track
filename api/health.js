@@ -8,7 +8,7 @@ export default function handler(req, res) {
 
   return res.status(200).json({
     status: 'online',
-    system: 'Kochi Metro Vercel Serverless API',
+    system: 'Kochi Metro Radar Serverless API',
     time: new Date().toISOString(),
   });
 }
