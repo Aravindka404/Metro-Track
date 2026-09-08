@@ -10,6 +10,8 @@ import {
   Share2,
   Crosshair,
   Check,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { MapBase } from '../components/MapBase.jsx';
 import { useStationContext } from '../context/useStationContext.jsx';
@@ -19,12 +21,41 @@ export function FocusView() {
   const navigate = useNavigate();
   const { trains, stations, istTime } = useStationContext();
 
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768
+  );
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Compute dynamic map padding so the focused train is offset above the mobile sheet
+  const mapPadding = useMemo(() => {
+    if (isMobile) {
+      return {
+        bottom: Math.round(window.innerHeight * 0.48),
+        top: 20,
+        left: 16,
+        right: 16,
+      };
+    }
+    return {
+      bottom: 40,
+      top: 40,
+      left: 480,
+      right: 40,
+    };
+  }, [isMobile]);
+
   const train = useMemo(() => {
     if (!id) return null;
     return trains.find((t) => t.id.toLowerCase() === id.toLowerCase());
   }, [trains, id]);
 
-  const trainShortId = train ? train.id.replace('KMRL-', '') : id;
+  const trainShortId = train ? train.id.replace('KMRL-', '') : (id ? id.replace('KMRL-', '') : '');
 
   const [viewState, setViewState] = useState({
     longitude: 76.315,
@@ -110,34 +141,36 @@ export function FocusView() {
   };
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#0B0F19] text-white font-sans select-none">
+    <div className="w-full min-h-[100dvh] h-[100dvh] relative overflow-hidden bg-[#0B0F19] text-white font-sans select-none overscroll-y-contain">
       {/* Pure Circuit Schematic Map */}
       <MapBase
         viewState={viewState}
         onViewStateChange={(newView) => {
           setViewState(newView);
         }}
+        padding={mapPadding}
         selectedTrainId={train?.id}
       />
 
       {/* Top Header Information Bar */}
-      <header className="absolute top-6 left-6 right-6 z-20 flex flex-wrap items-center justify-between pointer-events-none gap-4">
-        <div className="flex items-center gap-4 pointer-events-auto">
+      <header className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 z-20 flex flex-wrap items-center justify-between pointer-events-none gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 pointer-events-auto">
           <button
             onClick={() => navigate('/')}
-            className="p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-2 font-mono text-xs font-medium text-white hover:border-white/10 transition-colors"
+            className="p-3 sm:p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-2 font-mono text-xs font-medium text-white hover:border-white/10 transition-colors"
           >
             <ArrowLeft size={16} strokeWidth={1.5} className="text-slate-400" />
-            <span>BACK TO FULL MAP</span>
+            <span className="hidden sm:inline">BACK TO FULL MAP</span>
+            <span className="sm:hidden">MAP</span>
           </button>
 
-          <div className="p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-6">
+          <div className="p-3 sm:p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-3 sm:gap-6">
             <div className="flex items-center gap-2">
               <Train size={16} strokeWidth={1.5} className="text-slate-400" />
               <span className="font-mono text-xs font-bold text-white uppercase">
                 TRAIN {trainShortId}
               </span>
-              <span className="font-mono text-[9px] text-[#00A896] uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/5">
+              <span className="font-mono text-[9px] text-[#00A896] uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/5 hidden sm:inline-block">
                 LIVE TRACKING
               </span>
             </div>
@@ -154,10 +187,10 @@ export function FocusView() {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-4 pointer-events-auto">
+        <div className="flex items-center gap-2 sm:gap-4 pointer-events-auto">
           <button
             onClick={handleRecenter}
-            className={`p-4 rounded-xl border flex items-center gap-2 font-mono text-xs transition-colors backdrop-blur-md ${
+            className={`p-3 sm:p-4 rounded-xl border flex items-center gap-2 font-mono text-xs transition-colors backdrop-blur-md ${
               isLockedOnTrain
                 ? 'border-white/20 bg-white/10 text-white font-bold'
                 : 'border-white/5 bg-[#0E1524]/90 text-slate-400 hover:text-white hover:border-white/10'
@@ -171,7 +204,7 @@ export function FocusView() {
 
           <button
             onClick={handleCopyShareLink}
-            className="p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 hover:border-white/10 text-slate-400 hover:text-white transition-colors font-mono text-xs flex items-center gap-2 backdrop-blur-md"
+            className="p-3 sm:p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 hover:border-white/10 text-slate-400 hover:text-white transition-colors font-mono text-xs flex items-center gap-2 backdrop-blur-md"
           >
             <Share2 size={16} strokeWidth={1.5} className="text-current" />
             <span className="hidden sm:inline">
@@ -181,15 +214,60 @@ export function FocusView() {
         </div>
       </header>
 
-      {/* Floating Bento Focus Drawer */}
-      <div className="absolute bottom-6 left-6 right-6 sm:right-auto sm:w-[460px] max-h-[calc(100vh-120px)] z-20 pointer-events-auto flex flex-col gap-4">
-        {train ? (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="p-6 rounded-2xl border border-white/5 bg-[#0E1524]/95 backdrop-blur-md flex flex-col gap-6 max-h-[80vh] overflow-hidden"
-          >
+      {/* Floating Bento Focus Drawer / Mobile Swipeable Bottom Sheet */}
+      <motion.div
+        drag={isMobile ? 'y' : false}
+        dragConstraints={{ top: 0, bottom: 200 }}
+        dragElastic={0.15}
+        onDragEnd={(e, info) => {
+          if (info.offset.y > 60) {
+            setIsDrawerExpanded(false);
+          } else if (info.offset.y < -60) {
+            setIsDrawerExpanded(true);
+          }
+        }}
+        animate={{ y: isDrawerExpanded ? 0 : isMobile ? 'calc(100% - 60px)' : 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed bottom-0 left-0 right-0 sm:absolute sm:bottom-6 sm:left-6 sm:right-auto sm:w-[480px] z-30 pointer-events-auto overscroll-y-contain"
+      >
+        {trains.length === 0 ? (
+          /* Connecting to Telemetry / Awaiting initial payload */
+          <div className="p-6 rounded-t-3xl sm:rounded-2xl border border-white/5 bg-[#0E1524]/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 text-center min-h-[180px]">
+            <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs font-semibold">
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-ping" />
+              <span>CONNECTING TO TELEMETRY...</span>
+            </div>
+            <p className="font-mono text-xs text-slate-400 max-w-xs">
+              Awaiting real-time dispatch signals for Train {trainShortId}
+            </p>
+          </div>
+        ) : train ? (
+          <div className="p-6 rounded-t-3xl sm:rounded-2xl border border-white/5 bg-[#0E1524]/95 backdrop-blur-md flex flex-col gap-4 sm:gap-6 max-h-[82vh] sm:max-h-[78vh] overflow-hidden">
+            {/* Mobile Swipe Grab Bar Indicator */}
+            <div
+              onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
+              className="w-12 h-1.5 rounded-full bg-white/20 mx-auto cursor-grab active:cursor-grabbing sm:hidden"
+            />
+
+            {/* Mobile Drawer Header Toggle */}
+            <div
+              onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
+              className="flex items-center justify-between cursor-pointer border-b border-white/5 pb-3 select-none sm:hidden"
+            >
+              <div className="flex items-center gap-3">
+                <Train size={16} strokeWidth={1.5} className="text-slate-400" />
+                <span className="font-mono text-xs font-bold text-white uppercase">
+                  TRAIN {trainShortId}
+                </span>
+                <span className="font-mono text-[9px] text-[#00A896] uppercase px-2 py-0.5 rounded bg-white/5 border border-white/5">
+                  {train.speed} KM/H
+                </span>
+              </div>
+              <button className="text-slate-400 hover:text-white p-1">
+                {isDrawerExpanded ? <ChevronDown size={18} strokeWidth={1.5} /> : <ChevronUp size={18} strokeWidth={1.5} />}
+              </button>
+            </div>
+
             {/* Train Overview Bento Section */}
             <div className="p-4 rounded-xl border border-white/5 bg-[#0B0F19]/60 flex flex-col gap-4">
               <div className="flex items-center justify-between">
@@ -228,8 +306,8 @@ export function FocusView() {
               </div>
             </div>
 
-            {/* Telemetry Metrics Grid */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Telemetry Metrics Grid - Responsive: 1 col on small mobile, 2 col on sm/md */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Speed Bento Card */}
               <div className="p-4 rounded-xl border border-white/5 bg-[#0B0F19]/60 flex flex-col justify-between gap-2">
                 <div className="flex items-center justify-between text-slate-400">
@@ -262,10 +340,17 @@ export function FocusView() {
                 </div>
                 <div className="flex items-center justify-between font-mono text-[10px] text-slate-400 pt-1 border-t border-white/5">
                   <span>ARRIVING IN</span>
-                  <span className="text-white font-medium">
-                    {train.etaSeconds <= 0
-                      ? 'ARRIVING NOW'
-                      : `${Math.floor(train.etaSeconds / 60)}M ${train.etaSeconds % 60}S`}
+                  <span className="text-white font-medium flex items-center gap-1.5">
+                    {train.etaSeconds == null ? (
+                      <>
+                        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-ping" />
+                        <span>ESTIMATING</span>
+                      </>
+                    ) : train.etaSeconds <= 0 ? (
+                      'ARRIVING NOW'
+                    ) : (
+                      `${Math.floor(train.etaSeconds / 60)}M ${train.etaSeconds % 60}S`
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center justify-between font-mono text-[10px] text-slate-500">
@@ -286,7 +371,7 @@ export function FocusView() {
                 </span>
               </div>
 
-              <div className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 max-h-44 sm:max-h-52 overflow-y-auto pr-1">
                 {progressionStations.map((st) => (
                   <div
                     key={st.id}
@@ -323,14 +408,10 @@ export function FocusView() {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </div>
         ) : (
           /* Train Inactive Bento Card */
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="p-8 rounded-2xl border border-white/5 bg-[#0E1524]/95 backdrop-blur-md text-center flex flex-col items-center gap-4"
-          >
+          <div className="p-6 sm:p-8 rounded-t-3xl sm:rounded-2xl border border-white/5 bg-[#0E1524]/95 backdrop-blur-md text-center flex flex-col items-center gap-4">
             <Train size={24} strokeWidth={1.5} className="text-slate-400" />
             <div className="flex flex-col gap-1">
               <h3 className="font-mono text-sm font-bold text-white uppercase">
@@ -347,9 +428,9 @@ export function FocusView() {
               <ArrowLeft size={16} strokeWidth={1.5} className="text-current" />
               <span>BACK TO FULL MAP</span>
             </button>
-          </motion.div>
+          </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

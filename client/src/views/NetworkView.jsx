@@ -45,6 +45,7 @@ export function NetworkView() {
     trains,
     activeTrainsCount,
     istTime,
+    connectionStatus,
     stations,
     activeStation,
     setActiveStation,
@@ -57,13 +58,56 @@ export function NetworkView() {
   const [directionFilter, setDirectionFilter] = useState('ALL'); // 'ALL' | '0' (Southbound) | '1' (Northbound)
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
+
+  // Responsive state for dynamic map padding
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate dynamic map padding so objects are never hidden behind the bottom sheet
+  const mapPadding = useMemo(() => {
+    if (isMobile) {
+      return {
+        bottom: Math.round(window.innerHeight * 0.5),
+        top: 20,
+        left: 20,
+        right: 20,
+      };
+    }
+    return {
+      bottom: 40,
+      top: 40,
+      left: 480,
+      right: 40,
+    };
+  }, [isMobile]);
+
   const [viewState, setViewState] = useState({
     longitude: 76.315,
     latitude: 10.025,
     zoom: 12.5,
   });
 
-  // Geolocation detection on mount
+  // Smart helper for Tripunithura fallback station
+  const getTripunithuraStation = useCallback((stList) => {
+    if (!stList || stList.length === 0) return null;
+    return (
+      stList.find(
+        (s) =>
+          s.id === 'TRPN' ||
+          s.name.toLowerCase().includes('tripunithura') ||
+          s.name.toLowerCase().includes('thripunithura')
+      ) || stList[stList.length - 1]
+    );
+  }, []);
+
+  // Geolocation detection on mount with graceful failure fallback to Tripunithura
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -75,29 +119,61 @@ export function NetworkView() {
           if (stations.length > 0) {
             const nearest = getNearestStation(lat, lon, stations);
             setNearestStation(nearest);
+            if (!activeStation) setActiveStation(nearest);
           }
         },
-        () => {
-          // Fallback to central station (JLN Stadium)
+        (err) => {
+          console.warn('[Geolocation] Graceful fallback to Tripunithura:', err.message);
           if (stations.length > 0) {
-            const fallback = stations.find((s) => s.id === 'JLSD') || stations[12];
-            setNearestStation({ ...fallback, distanceKm: 1.2 });
+            const fallback = getTripunithuraStation(stations);
+            if (fallback) {
+              setNearestStation(fallback);
+              if (!activeStation) setActiveStation(fallback);
+            }
           }
         },
-        { enableHighAccuracy: true, timeout: 8000 }
+        { enableHighAccuracy: true, timeout: 6000 }
       );
     } else if (stations.length > 0) {
-      const fallback = stations.find((s) => s.id === 'JLSD') || stations[12];
-      setNearestStation({ ...fallback, distanceKm: 1.2 });
+      const fallback = getTripunithuraStation(stations);
+      if (fallback) {
+        setNearestStation(fallback);
+        if (!activeStation) setActiveStation(fallback);
+      }
     }
-  }, [stations, setUserLocation, setNearestStation]);
+  }, [stations, setUserLocation, setNearestStation, setActiveStation, activeStation, getTripunithuraStation]);
 
+  // Recalculate if stations load after location resolution
   useEffect(() => {
     if (userLocation && stations.length > 0 && !nearestStation) {
       const nearest = getNearestStation(userLocation.lat, userLocation.lon, stations);
       setNearestStation(nearest);
+      if (!activeStation) setActiveStation(nearest);
+    } else if (stations.length > 0 && !activeStation) {
+      const fallback = getTripunithuraStation(stations);
+      if (fallback) setActiveStation(fallback);
     }
-  }, [userLocation, stations, nearestStation, setNearestStation]);
+  }, [userLocation, stations, nearestStation, activeStation, setNearestStation, setActiveStation, getTripunithuraStation]);
+
+  // Phase 3: Search input 300ms debounce with automatic routing to FocusView
+  useEffect(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return;
+
+    const timer = setTimeout(() => {
+      const matched = trains.find((t) => {
+        const fullId = t.id.toLowerCase();
+        const shortId = t.id.replace('KMRL-', '').toLowerCase();
+        return fullId === trimmed || shortId === trimmed;
+      });
+
+      if (matched) {
+        navigate(`/train/${matched.id}`);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, trains, navigate]);
 
   // Filtered train dataset
   const filteredTrains = useMemo(() => {
@@ -132,18 +208,33 @@ export function NetworkView() {
     [navigate]
   );
 
+  const handleSelectStation = useCallback(
+    (st) => {
+      setActiveStation(st);
+      setViewState((prev) => ({
+        ...prev,
+        longitude: st.lon,
+        latitude: st.lat,
+        zoom: 13.5,
+      }));
+    },
+    [setActiveStation]
+  );
+
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#0B0F19] text-white font-sans select-none">
-      {/* Pure Circuit Schematic Map */}
+    <div className="w-full min-h-[100dvh] h-[100dvh] relative overflow-hidden bg-[#0B0F19] text-white font-sans select-none overscroll-y-contain">
+      {/* Pure Circuit Schematic Map with Dynamic Padding */}
       <MapBase
         viewState={viewState}
         onViewStateChange={setViewState}
         onSelectTrain={handleSelectTrain}
+        onSelectStation={handleSelectStation}
+        padding={mapPadding}
       />
 
       {/* Top Header Information Bar */}
-      <header className="absolute top-6 left-6 right-6 z-20 flex flex-wrap items-center justify-between pointer-events-none gap-4">
-        <div className="pointer-events-auto p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-6">
+      <header className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-20 flex flex-wrap items-center justify-between pointer-events-none gap-4">
+        <div className="pointer-events-auto p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-4 sm:gap-6">
           <div className="flex flex-col">
             <span className="font-mono text-xs font-bold tracking-widest text-white uppercase">
               KOCHI METRO
@@ -177,7 +268,7 @@ export function NetworkView() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            onClick={() => setActiveStation(nearestStation)}
+            onClick={() => handleSelectStation(nearestStation)}
             className="pointer-events-auto p-4 rounded-xl border border-white/5 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-4 cursor-pointer hover:border-white/10 transition-colors"
           >
             <MapPin size={18} strokeWidth={1.5} className="text-slate-400" />
@@ -202,13 +293,29 @@ export function NetworkView() {
         )}
       </header>
 
-      {/* Floating Bento Drawer: Departures & Active Trains */}
+      {/* Swipeable Mobile Bottom Sheet & Bento Container */}
       <motion.div
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 200 }}
+        dragElastic={0.15}
+        onDragEnd={(e, info) => {
+          if (info.offset.y > 60) {
+            setIsDrawerExpanded(false);
+          } else if (info.offset.y < -60) {
+            setIsDrawerExpanded(true);
+          }
+        }}
         animate={{ y: isDrawerExpanded ? 0 : 'calc(100% - 56px)' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute bottom-6 left-6 right-6 sm:right-auto sm:w-[460px] z-30 pointer-events-auto"
+        className="absolute bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[480px] md:w-[560px] z-30 pointer-events-auto overscroll-y-contain"
       >
-        <div className="p-6 rounded-2xl border border-white/5 bg-[#0E1524]/95 backdrop-blur-md flex flex-col gap-6 max-h-[78vh] overflow-hidden">
+        <div className="p-6 rounded-t-3xl sm:rounded-2xl border border-white/5 bg-[#0E1524]/95 backdrop-blur-md flex flex-col gap-6 max-h-[82vh] sm:max-h-[78vh] overflow-hidden">
+          {/* Mobile Swipe Grab Bar Indicator */}
+          <div
+            onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
+            className="w-12 h-1.5 rounded-full bg-white/20 mx-auto cursor-grab active:cursor-grabbing sm:hidden"
+          />
+
           {/* Drawer Header Handle */}
           <div
             onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
@@ -232,21 +339,22 @@ export function NetworkView() {
 
           {/* Drawer Content Area */}
           <div className="overflow-y-auto flex flex-col gap-6 pr-1">
-            {/* Active / Nearest Station Departures Bento Card */}
-            {(activeStation || nearestStation) && (
+            {/* Bento Responsive Grid: Left (Departures) + Right (Search & Filters) on md: */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Active / Nearest Station Departures Bento Card */}
               <div className="p-4 rounded-xl border border-white/5 bg-[#0B0F19]/60 flex flex-col gap-4">
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                   <div className="flex items-center gap-2">
                     <MapPin size={18} strokeWidth={1.5} className="text-slate-400" />
-                    <span className="font-mono text-xs font-semibold text-white">
-                      {(activeStation || nearestStation).name}
+                    <span className="font-mono text-xs font-semibold text-white truncate max-w-[120px]">
+                      {(activeStation || nearestStation)?.name || 'STATION'}
                     </span>
                     <span className="font-mono text-[10px] text-slate-500">
-                      {(activeStation || nearestStation).id}
+                      {(activeStation || nearestStation)?.id}
                     </span>
                   </div>
-                  <span className="font-mono text-[10px] text-slate-400 tracking-wider uppercase">
-                    NEXT DEPARTING TRAINS
+                  <span className="font-mono text-[9px] text-slate-400 tracking-wider uppercase">
+                    NEXT TRAINS
                   </span>
                 </div>
 
@@ -256,27 +364,27 @@ export function NetworkView() {
                       <div
                         key={dep.id}
                         onClick={() => handleSelectTrain(dep)}
-                        className="p-4 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer flex items-center justify-between transition-colors"
+                        className="p-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer flex items-center justify-between transition-colors"
                       >
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-bold text-white">
                               TRAIN {dep.id.replace('KMRL-', '')}
                             </span>
-                            <div className="flex items-center gap-1 font-mono text-[11px] text-slate-400">
-                              <ArrowRight size={16} strokeWidth={1.5} className="text-slate-400" />
-                              <span>{dep.destination.toUpperCase()}</span>
+                            <div className="flex items-center gap-1 font-mono text-[10px] text-slate-400">
+                              <ArrowRight size={14} strokeWidth={1.5} className="text-slate-400" />
+                              <span className="truncate max-w-[80px]">{dep.destination.toUpperCase()}</span>
                             </div>
                           </div>
-                          <span className="font-mono text-[10px] text-slate-500">
-                            DISTANCE: {dep.distanceToNextMeters} METERS
+                          <span className="font-mono text-[9px] text-slate-500">
+                            {dep.distanceToNextMeters} M AWAY
                           </span>
                         </div>
 
                         <div className="text-right">
                           <span className="font-mono text-xs font-bold text-white">
                             {dep.etaSeconds <= 0
-                              ? 'ARRIVING NOW'
+                              ? 'ARRIVING'
                               : `${Math.floor(dep.etaSeconds / 60)}M ${dep.etaSeconds % 60}S`}
                           </span>
                         </div>
@@ -284,58 +392,67 @@ export function NetworkView() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 rounded-lg border border-white/5 bg-white/[0.01] text-center font-mono text-xs text-slate-500">
-                    NO TRAINS CURRENTLY APPROACHING THIS STATION
+                  <div className="p-4 rounded-lg border border-white/5 bg-white/[0.01] flex items-center justify-center min-h-[64px]">
+                    {trains.length === 0 ? (
+                      <div className="flex items-center gap-2 text-slate-500 font-mono text-xs">
+                        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-ping" />
+                        <span>LOCATING TRAINS...</span>
+                      </div>
+                    ) : (
+                      <span className="font-mono text-[10px] text-slate-500 text-center">
+                        NO TRAINS APPROACHING THIS STATION
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Filter and Search Bento Controls */}
-            <div className="flex flex-col gap-4">
-              <div className="relative">
-                <Search size={18} strokeWidth={1.5} className="text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="SEARCH STATION OR TRAIN NUMBER..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full font-mono text-xs rounded-xl pl-11 pr-4 py-2 bg-white/[0.03] border border-white/5 focus:outline-none focus:border-white/20 text-white placeholder-slate-500 transition-colors uppercase"
-                />
-              </div>
+              {/* Filter and Search Bento Controls */}
+              <div className="p-4 rounded-xl border border-white/5 bg-[#0B0F19]/60 flex flex-col gap-3">
+                <div className="relative">
+                  <Search size={18} strokeWidth={1.5} className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="SEARCH TRAIN ID OR STATION..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full font-mono text-xs pl-10 pr-3 py-2 bg-transparent focus:ring-0 focus:outline-none text-white placeholder-slate-500 uppercase border border-white/5 rounded-lg transition-colors"
+                  />
+                </div>
 
-              {/* Direction Tabs */}
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setDirectionFilter('ALL')}
-                  className={`p-2 rounded-lg font-mono text-[10px] tracking-wider uppercase border transition-colors text-center ${
-                    directionFilter === 'ALL'
-                      ? 'bg-white/10 border-white/20 text-white font-bold'
-                      : 'bg-white/[0.02] border-white/5 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  ALL TRAINS
-                </button>
-                <button
-                  onClick={() => setDirectionFilter('0')}
-                  className={`p-2 rounded-lg font-mono text-[10px] tracking-wider uppercase border transition-colors text-center ${
-                    directionFilter === '0'
-                      ? 'bg-white/10 border-white/20 text-white font-bold'
-                      : 'bg-white/[0.02] border-white/5 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  TOWARDS SOUTH
-                </button>
-                <button
-                  onClick={() => setDirectionFilter('1')}
-                  className={`p-2 rounded-lg font-mono text-[10px] tracking-wider uppercase border transition-colors text-center ${
-                    directionFilter === '1'
-                      ? 'bg-white/10 border-white/20 text-white font-bold'
-                      : 'bg-white/[0.02] border-white/5 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  TOWARDS NORTH
-                </button>
+                {/* Direction Tabs */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    onClick={() => setDirectionFilter('ALL')}
+                    className={`p-1.5 rounded-lg font-mono text-[9px] tracking-wider uppercase border transition-colors text-center ${
+                      directionFilter === 'ALL'
+                        ? 'bg-white/10 border-white/20 text-white font-bold'
+                        : 'bg-white/[0.02] border-white/5 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    ALL
+                  </button>
+                  <button
+                    onClick={() => setDirectionFilter('0')}
+                    className={`p-1.5 rounded-lg font-mono text-[9px] tracking-wider uppercase border transition-colors text-center ${
+                      directionFilter === '0'
+                        ? 'bg-white/10 border-white/20 text-white font-bold'
+                        : 'bg-white/[0.02] border-white/5 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    SOUTH
+                  </button>
+                  <button
+                    onClick={() => setDirectionFilter('1')}
+                    className={`p-1.5 rounded-lg font-mono text-[9px] tracking-wider uppercase border transition-colors text-center ${
+                      directionFilter === '1'
+                        ? 'bg-white/10 border-white/20 text-white font-bold'
+                        : 'bg-white/[0.02] border-white/5 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    NORTH
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -377,7 +494,14 @@ export function NetworkView() {
 
               {filteredTrains.length === 0 && (
                 <div className="p-8 text-center font-mono text-xs text-slate-500 rounded-xl border border-white/5 bg-white/[0.01]">
-                  NO ACTIVE TRAINS FOUND
+                  {trains.length === 0 ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-ping" />
+                      <span>CONNECTING TO SATELLITE TELEMETRY...</span>
+                    </div>
+                  ) : (
+                    'NO ACTIVE TRAINS FOUND'
+                  )}
                 </div>
               )}
             </div>

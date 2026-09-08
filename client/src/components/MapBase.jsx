@@ -75,8 +75,12 @@ export function MapBase({
   children,
   selectedTrainId = null,
   onSelectTrain,
+  onSelectStation,
+  padding,
+  mapRef: externalMapRef,
 }) {
-  const mapRef = useRef(null);
+  const internalMapRef = useRef(null);
+  const mapRef = externalMapRef || internalMapRef;
   const { trains, stations, tracksGeoJSON, activeStation, setActiveStation } = useStationContext();
 
   // Schematic Track Glow (wide blurred trace)
@@ -111,7 +115,7 @@ export function MapBase({
   );
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#0B0F19]">
+    <div className="w-full min-h-[100dvh] h-full relative overflow-hidden bg-[#0B0F19]">
       {/* Blueprint Precision Grid Overlay */}
       <div className="absolute inset-0 pointer-events-none blueprint-grid-overlay z-0 opacity-80" />
 
@@ -127,6 +131,7 @@ export function MapBase({
       <Map
         ref={mapRef}
         {...(viewState || DEFAULT_CENTER)}
+        padding={padding}
         onMove={(evt) => onViewStateChange && onViewStateChange(evt.viewState)}
         mapStyle={CIRCUIT_STYLE}
         pitch={0}
@@ -160,7 +165,10 @@ export function MapBase({
               anchor="center"
             >
               <div
-                onClick={() => setActiveStation(st)}
+                onClick={() => {
+                  setActiveStation(st);
+                  if (onSelectStation) onSelectStation(st);
+                }}
                 className="group relative cursor-pointer flex items-center justify-center select-none"
               >
                 {/* Stark White Station Node */}

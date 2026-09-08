@@ -8,7 +8,7 @@ export default function App() {
   return (
     <StationProvider>
       <BrowserRouter>
-        <main className="w-screen h-screen relative overflow-hidden bg-[#0B0F19]">
+        <main className="w-screen min-h-[100dvh] h-[100dvh] relative overflow-hidden bg-[#0B0F19]">
           <Routes>
             <Route path="/" element={<NetworkView />} />
             <Route path="/train/:id" element={<FocusView />} />
