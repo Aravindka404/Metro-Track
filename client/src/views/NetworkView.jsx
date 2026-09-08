@@ -10,7 +10,7 @@ import {
   getStationHopCount,
   normalizeStationId,
 } from '../utils/fareCalculator.js';
-import { THEMES, getStoredTheme, saveTheme } from '../utils/themeConfig.js';
+import { THEMES } from '../utils/themeConfig.js';
 
 // Precision Haversine algorithm for nearest station detection
 function getNearestStation(userLat, userLon, stations) {
@@ -84,14 +84,8 @@ export function NetworkView() {
     setSelectedTrainIdx(0);
   }, [currentStation?.id, destinationStation?.id, selectedTime]);
 
-  // Active theme state (kmrl, swiss, nordic)
-  const [activeThemeId, setActiveThemeId] = useState(() => getStoredTheme());
-  const currentTheme = THEMES[activeThemeId] || THEMES.kmrl;
-
-  const handleSelectTheme = (themeId) => {
-    setActiveThemeId(themeId);
-    saveTheme(themeId);
-  };
+  // Active visual style: Nordic Frost with Swiss Signal Red Route Highlight
+  const currentTheme = THEMES.nordic;
 
   // Responsive mobile state
   const [isMobile, setIsMobile] = useState(
@@ -470,23 +464,10 @@ export function NetworkView() {
           </span>
         </div>
 
-        {/* 3-Way Instant Theme Switcher */}
-        <div className="pointer-events-auto p-1 rounded-xl border border-white/10 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-1 shadow-lg font-mono text-[10px] font-bold">
-          {Object.values(THEMES).map((th) => {
-            const isActive = activeThemeId === th.id;
-            return (
-              <button
-                key={th.id}
-                onClick={() => handleSelectTheme(th.id)}
-                className={`px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg transition-all ${
-                  isActive ? th.pillActive : th.pillInactive
-                }`}
-                title={th.description}
-              >
-                {th.shortName}
-              </button>
-            );
-          })}
+        {/* Live Network Telemetry Badge */}
+        <div className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/10 bg-[#0E1626]/85 backdrop-blur-md flex items-center gap-2 shadow-lg">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+          <span className="font-mono text-[11px] font-bold text-white tracking-wider">LIVE</span>
         </div>
       </header>
 
@@ -537,100 +518,107 @@ export function NetworkView() {
           <div className="overflow-y-auto flex flex-col gap-3.5 pr-1 pb-1">
             {/* Premium Station Selector Card */}
             <div
-              className={`p-3.5 sm:p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 relative shadow-inner transition-colors duration-300`}
+              className={`p-3.5 sm:p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 shadow-inner transition-colors duration-300`}
             >
-              {/* Boarding Station Field */}
-              <div
-                className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors pr-12`}
-              >
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{
-                    backgroundColor: currentTheme.accentPrimary,
-                    boxShadow: `0 0 0 4px ${currentTheme.accentPrimary}33`,
-                  }}
-                />
-                <div className="flex flex-col flex-1 min-w-0">
-                  <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
-                    BOARDING FROM
-                  </span>
-                  <select
-                    value={currentStation?.id || ''}
-                    onChange={(e) => {
-                      const selected = stations.find((s) => s.id === e.target.value);
-                      if (selected) handleSelectStation(selected);
-                    }}
-                    className="w-full bg-transparent text-white font-mono text-xs sm:text-sm font-semibold focus:outline-none cursor-pointer truncate pt-0.5"
+              {/* Route Input Group + Dedicated Invert Button */}
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                {/* Inputs Column */}
+                <div className="flex-1 flex flex-col gap-2 min-w-0">
+                  {/* Boarding Station Field */}
+                  <div
+                    className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors`}
                   >
-                    {stations.map((st) => (
-                      <option key={st.id} value={st.id} className="bg-[#0E1626] text-white">
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Centered Floating Swap Button */}
-              <div className="absolute right-4 sm:right-5 top-[46px] z-10">
-                <button
-                  onClick={handleSwapStations}
-                  disabled={!destinationStation}
-                  title="Swap Stations"
-                  className={`p-2 rounded-full border shadow-xl active:scale-90 transition-all ${currentTheme.swapBtn} disabled:opacity-20 disabled:cursor-not-allowed`}
-                >
-                  <ArrowUpDown size={14} strokeWidth={2.5} />
-                </button>
-              </div>
-
-              {/* Destination Station Field */}
-              <div
-                className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors pr-12`}
-              >
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{
-                    backgroundColor: currentTheme.accentSecondary === '#FFFFFF' ? '#FFFFFF' : currentTheme.accentSecondary,
-                    boxShadow: `0 0 0 4px ${currentTheme.accentSecondary}33`,
-                  }}
-                />
-                <div className="flex flex-col flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
-                      DESTINATION
-                    </span>
-                    {destinationStation && (
-                      <button
-                        onClick={handleClearDestination}
-                        className="text-[10px] text-slate-400 hover:text-white font-mono transition-colors mr-1"
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: currentTheme.accentPrimary,
+                        boxShadow: `0 0 0 4px ${currentTheme.accentPrimary}33`,
+                      }}
+                    />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
+                        BOARDING FROM
+                      </span>
+                      <select
+                        value={currentStation?.id || ''}
+                        onChange={(e) => {
+                          const selected = stations.find((s) => s.id === e.target.value);
+                          if (selected) handleSelectStation(selected);
+                        }}
+                        className="w-full bg-transparent text-white font-mono text-xs sm:text-sm font-semibold focus:outline-none cursor-pointer truncate pt-0.5"
                       >
-                        Clear
-                      </button>
-                    )}
+                        {stations.map((st) => (
+                          <option key={st.id} value={st.id} className="bg-[#0E1626] text-white">
+                            {st.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <select
-                    value={destinationStation?.id || ''}
-                    onChange={(e) => {
-                      if (!e.target.value) {
-                        setDestinationStation(null);
-                      } else {
-                        const selected = stations.find((s) => s.id === e.target.value);
-                        if (selected) setDestinationStation(selected);
-                      }
-                    }}
-                    className="w-full bg-transparent text-white font-mono text-xs sm:text-sm font-semibold focus:outline-none cursor-pointer truncate pt-0.5"
+
+                  {/* Destination Station Field */}
+                  <div
+                    className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors`}
                   >
-                    <option value="" className="bg-[#0E1626] text-slate-400">
-                      Select destination...
-                    </option>
-                    {stations
-                      .filter((st) => normalizeStationId(st.id) !== normalizeStationId(currentStation?.id))
-                      .map((st) => (
-                        <option key={st.id} value={st.id} className="bg-[#0E1626] text-white">
-                          {st.name}
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: '#E11D48',
+                        boxShadow: '0 0 0 4px rgba(225,29,72,0.25)',
+                      }}
+                    />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
+                          DESTINATION
+                        </span>
+                        {destinationStation && (
+                          <button
+                            onClick={handleClearDestination}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-mono transition-colors mr-0.5"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <select
+                        value={destinationStation?.id || ''}
+                        onChange={(e) => {
+                          if (!e.target.value) {
+                            setDestinationStation(null);
+                          } else {
+                            const selected = stations.find((s) => s.id === e.target.value);
+                            if (selected) setDestinationStation(selected);
+                          }
+                        }}
+                        className="w-full bg-transparent text-white font-mono text-xs sm:text-sm font-semibold focus:outline-none cursor-pointer truncate pt-0.5"
+                      >
+                        <option value="" className="bg-[#0E1626] text-slate-400">
+                          Select destination...
                         </option>
-                      ))}
-                  </select>
+                        {stations
+                          .filter((st) => normalizeStationId(st.id) !== normalizeStationId(currentStation?.id))
+                          .map((st) => (
+                            <option key={st.id} value={st.id} className="bg-[#0E1626] text-white">
+                              {st.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dedicated Invert/Swap Stations Button (Centered, Zero Overlap) */}
+                <div className="shrink-0 flex items-center justify-center">
+                  <button
+                    onClick={handleSwapStations}
+                    disabled={!destinationStation}
+                    title="Swap Boarding & Destination"
+                    aria-label="Swap Stations"
+                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl border flex items-center justify-center shadow-lg transition-all ${currentTheme.swapBtn} disabled:opacity-20 disabled:cursor-not-allowed hover:scale-105 active:scale-95`}
+                  >
+                    <ArrowUpDown size={16} strokeWidth={2.2} />
+                  </button>
                 </div>
               </div>
 

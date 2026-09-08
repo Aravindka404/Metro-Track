@@ -29,13 +29,13 @@ export function MapBase({
   onSelectStation,
   padding,
   mapRef: externalMapRef,
-  theme = THEMES.kmrl,
+  theme = THEMES.nordic,
 }) {
   const internalMapRef = useRef(null);
   const mapRef = externalMapRef || internalMapRef;
   const { trains, stations, tracksGeoJSON, activeStation, setActiveStation } = useStationContext();
 
-  const activeTheme = theme || THEMES.kmrl;
+  const activeTheme = theme || THEMES.nordic;
 
   // Dynamic schematic circuit style with Kochi water silhouettes adapting to theme
   const circuitStyle = useMemo(() => {
@@ -196,9 +196,9 @@ export function MapBase({
       type: 'line',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': activeTheme.map?.routeHighlightGlow || '#FFB703',
+        'line-color': activeTheme.map?.routeHighlightGlow || '#E11D48',
         'line-width': 10,
-        'line-opacity': 0.75,
+        'line-opacity': 0.85,
         'line-blur': 4,
       },
     }),
@@ -211,7 +211,7 @@ export function MapBase({
       type: 'line',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': activeTheme.map?.routeHighlightCore || '#FFE494',
+        'line-color': activeTheme.map?.routeHighlightCore || '#FFFFFF',
         'line-width': 3.5,
         'line-opacity': 1,
       },
@@ -278,14 +278,26 @@ export function MapBase({
                 }}
                 className="group relative cursor-pointer flex items-center justify-center select-none"
               >
-                {/* Stark White Station Node */}
-                <div
-                  className={`rounded-full transition-transform duration-150 ${
-                    isActive
-                      ? 'w-2.5 h-2.5 bg-white ring-2 ring-[#00A896] ring-offset-2 ring-offset-[#0B0F19]'
-                      : 'w-2 h-2 bg-white group-hover:scale-125'
-                  }`}
-                />
+                {/* Precision Schematic Station Node */}
+              {(() => {
+                const normStId = st.id.toUpperCase() === 'TRPN' ? 'TPHT' : st.id.toUpperCase();
+                const normOrigin = routeHighlight?.originId?.toUpperCase() === 'TRPN' ? 'TPHT' : routeHighlight?.originId?.toUpperCase();
+                const normDest = routeHighlight?.destinationId?.toUpperCase() === 'TRPN' ? 'TPHT' : routeHighlight?.destinationId?.toUpperCase();
+
+                const isOrigin = routeHighlight && (normStId === normOrigin);
+                const isDest = routeHighlight && (normStId === normDest);
+
+                let nodeClass = 'w-2 h-2 bg-white group-hover:scale-125';
+                if (isDest) {
+                  nodeClass = 'w-2.5 h-2.5 bg-white ring-2 ring-[#E11D48] ring-offset-2 ring-offset-[#0B0F17] shadow-[0_0_10px_rgba(225,29,72,0.9)]';
+                } else if (isOrigin || isActive) {
+                  nodeClass = 'w-2.5 h-2.5 bg-white ring-2 ring-[#38BDF8] ring-offset-2 ring-offset-[#0B0F17] shadow-[0_0_10px_rgba(56,189,248,0.9)]';
+                }
+
+                return (
+                  <div className={`rounded-full transition-transform duration-150 ${nodeClass}`} />
+                );
+              })()}
 
                 {/* Precision Schematic Typography */}
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none whitespace-nowrap z-10">

@@ -44,36 +44,17 @@ export function TrainMarker({ train, isSelected = false, isRecommended = false, 
 
   const trainShortId = train.id.replace('KMRL-', '');
 
-  // Theme-adaptive capsule styles
-  const isSwiss = theme?.id === 'swiss';
-  const isNordic = theme?.id === 'nordic';
-
-  let capsuleClass = 'bg-[#00B4D8] border border-white/30 text-white';
-  let pingClass = 'bg-cyan-400/30';
+  let capsuleClass = 'bg-[#0284C7] border border-white/25 text-white hover:border-white/60';
+  let pingClass = 'bg-rose-500/40';
 
   if (isRecommended) {
-    if (isSwiss) {
-      capsuleClass = 'bg-[#E11D48] ring-2 ring-white shadow-[0_0_14px_rgba(225,29,72,0.9)] text-white';
-      pingClass = 'bg-rose-500/40';
-    } else if (isNordic) {
-      capsuleClass = 'bg-[#34D399] ring-2 ring-white shadow-[0_0_14px_rgba(52,211,153,0.9)] text-[#0B0F17]';
-      pingClass = 'bg-emerald-400/40';
-    } else {
-      capsuleClass = 'bg-[#FFB703] ring-2 ring-white shadow-[0_0_14px_rgba(255,183,3,0.9)] text-[#061524]';
-      pingClass = 'bg-amber-400/40';
-    }
+    // Swiss Signal Red for the recommended train on the selected route
+    capsuleClass = 'bg-[#E11D48] ring-2 ring-white shadow-[0_0_14px_rgba(225,29,72,0.9)] text-white font-extrabold';
+    pingClass = 'bg-rose-500/40';
   } else if (isSelected) {
-    capsuleClass = isSwiss
-      ? 'bg-zinc-100 ring-2 ring-[#E11D48] text-black font-extrabold'
-      : isNordic
-      ? 'bg-[#38BDF8] ring-1 ring-white text-black'
-      : 'bg-[#00A896] ring-1 ring-white text-white';
+    capsuleClass = 'bg-[#38BDF8] ring-2 ring-white text-[#0B0F17] font-extrabold shadow-[0_0_10px_rgba(56,189,248,0.8)]';
   } else {
-    capsuleClass = isSwiss
-      ? 'bg-[#27272A] border border-white/30 text-white hover:border-white/60'
-      : isNordic
-      ? 'bg-[#0284C7] border border-white/20 text-white hover:border-white/60'
-      : 'bg-[#00B4D8] border border-white/20 text-white hover:border-white/60';
+    capsuleClass = 'bg-[#0369A1] border border-white/20 text-white hover:border-white/50';
   }
 
   return (
