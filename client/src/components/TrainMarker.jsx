@@ -287,17 +287,17 @@ export function TrainMarker({
 
         {/* Minimalist High-Precision Telemetry Hover Tooltip */}
         <div className="absolute -top-11 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-40">
-          <div className="px-2.5 py-1.5 rounded-xl bg-[#090F1B]/95 border border-white/15 backdrop-blur-md text-[10px] font-mono shadow-2xl flex flex-col gap-0.5 whitespace-nowrap min-w-[130px]">
+          <div className="px-2.5 py-1.5 rounded-xl bg-[#090F1B]/95 border border-white/15 backdrop-blur-md text-[10px] font-sans shadow-2xl flex flex-col gap-0.5 whitespace-nowrap min-w-[130px]">
             {/* Header: Direction and Train ID */}
             <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1">
               <span
-                className="font-bold flex items-center gap-1"
+                className="font-sans font-extrabold flex items-center gap-1 tracking-tight"
                 style={{ color: visualConfig.badgeColor }}
               >
                 <span>{directionGlyph}</span>
-                <span>TRAIN {trainShortId}</span>
+                <span>TRAIN <span className="font-mono font-bold">{trainShortId}</span></span>
               </span>
-              <span className="text-white font-medium text-[9px] px-1 py-0.2 rounded bg-white/10">
+              <span className="text-white font-sans font-bold text-[9px] px-1.5 py-0.5 rounded bg-white/10 tracking-wider">
                 ➔ {directionLabel}
               </span>
             </div>
@@ -305,16 +305,22 @@ export function TrainMarker({
             {/* Telemetry Status Line */}
             <div className="flex items-center gap-1.5 pt-0.5 text-[9px]">
               <span
-                className={`font-semibold ${
+                className={`font-sans font-bold ${
                   train.isDwelling ? 'text-amber-400' : 'text-emerald-400'
                 }`}
               >
-                {train.isDwelling ? 'AT STATION (DWELLING)' : `${train.speed} KM/H`}
+                {train.isDwelling ? (
+                  'AT STATION'
+                ) : (
+                  <>
+                    <strong className="font-mono font-bold">{train.speed}</strong> KM/H
+                  </>
+                )}
               </span>
               {train.nextStation && (
                 <>
                   <span className="text-slate-600">•</span>
-                  <span className="text-slate-300 truncate max-w-[90px]">
+                  <span className="text-slate-300 font-sans font-medium truncate max-w-[95px]">
                     Next: {train.nextStation}
                   </span>
                 </>

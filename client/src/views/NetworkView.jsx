@@ -451,23 +451,23 @@ export function NetworkView() {
       {/* Clean Minimal Header Bar */}
       <header className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-20 flex items-center justify-between pointer-events-none gap-2">
         <div className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-white/10 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-2.5 sm:gap-3 shadow-lg">
-          <span className="font-mono text-xs font-bold tracking-widest text-white uppercase">
+          <span className="font-sans text-xs font-extrabold tracking-wider text-white uppercase">
             KOCHI METRO
           </span>
           <div className="h-3 w-[1px] bg-white/15" />
-          <span className="font-mono text-[11px] text-slate-300">
-            {activeTrainsCount} trains active
+          <span className="font-sans text-xs text-slate-300 font-medium">
+            <strong className="font-mono font-bold text-white">{activeTrainsCount}</strong> trains active
           </span>
           <div className="h-3 w-[1px] bg-white/15 hidden sm:block" />
-          <span className="font-mono text-[11px] text-slate-400 hidden sm:inline">
-            {istTime || '--:--:--'} IST
+          <span className="font-mono text-xs text-slate-400 hidden sm:inline tabular-nums">
+            {istTime || '--:--:--'} <span className="font-sans text-[10px] font-semibold tracking-wider text-slate-500">IST</span>
           </span>
         </div>
 
         {/* Live Network Telemetry Badge */}
         <div className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/10 bg-[#0E1626]/85 backdrop-blur-md flex items-center gap-2 shadow-lg">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-          <span className="font-mono text-[11px] font-bold text-white tracking-wider">LIVE</span>
+          <span className="font-sans text-xs font-extrabold text-white tracking-wider">LIVE</span>
         </div>
       </header>
 
@@ -502,7 +502,7 @@ export function NetworkView() {
             className="flex items-center justify-between cursor-pointer border-b border-white/10 pb-2.5 select-none"
           >
             <div className="flex items-center gap-2 min-w-0 pr-2">
-              <span className="font-mono text-sm font-bold text-white uppercase tracking-wide truncate">
+              <span className="font-sans text-sm sm:text-base font-bold text-white tracking-tight truncate">
                 {destinationStation
                   ? `${currentStation?.name} ➔ ${destinationStation.name}`
                   : `${currentStation?.name || 'Kochi'} Station`}
@@ -536,7 +536,7 @@ export function NetworkView() {
                       }}
                     />
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
+                      <span className="font-sans text-[10px] text-slate-400 uppercase tracking-wider font-bold">
                         BOARDING FROM
                       </span>
                       <select
@@ -545,7 +545,7 @@ export function NetworkView() {
                           const selected = stations.find((s) => s.id === e.target.value);
                           if (selected) handleSelectStation(selected);
                         }}
-                        className="w-full bg-transparent text-white font-mono text-xs sm:text-sm font-semibold focus:outline-none cursor-pointer truncate pt-0.5"
+                        className="w-full bg-transparent text-white font-sans text-sm sm:text-base font-bold focus:outline-none cursor-pointer truncate pt-0.5 tracking-tight"
                       >
                         {stations.map((st) => (
                           <option key={st.id} value={st.id} className="bg-[#0E1626] text-white">
@@ -569,13 +569,13 @@ export function NetworkView() {
                     />
                     <div className="flex flex-col flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
+                        <span className="font-sans text-[10px] text-slate-400 uppercase tracking-wider font-bold">
                           DESTINATION
                         </span>
                         {destinationStation && (
                           <button
                             onClick={handleClearDestination}
-                            className="text-[10px] text-rose-400 hover:text-rose-300 font-mono transition-colors mr-0.5"
+                            className="text-[11px] text-rose-400 hover:text-rose-300 font-sans font-bold transition-colors mr-0.5"
                           >
                             Clear
                           </button>
@@ -591,7 +591,7 @@ export function NetworkView() {
                             if (selected) setDestinationStation(selected);
                           }
                         }}
-                        className="w-full bg-transparent text-white font-mono text-xs sm:text-sm font-semibold focus:outline-none cursor-pointer truncate pt-0.5"
+                        className="w-full bg-transparent text-white font-sans text-sm sm:text-base font-bold focus:outline-none cursor-pointer truncate pt-0.5 tracking-tight"
                       >
                         <option value="" className="bg-[#0E1626] text-slate-400">
                           Select destination...
@@ -623,34 +623,34 @@ export function NetworkView() {
               </div>
 
               {/* Departure Time Control (Subtle UX - Leave Now is silent default) */}
-              <div className="pt-2 border-t border-white/5 font-mono text-xs">
+              <div className="pt-2 border-t border-white/5 font-sans text-xs">
                 {!selectedTime ? (
                   !isTimePickerOpen ? (
                     <button
                       type="button"
                       onClick={() => setIsTimePickerOpen(true)}
-                      className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors py-0.5 px-1 rounded active:scale-95"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors py-0.5 px-1 rounded active:scale-95"
                     >
-                      <Clock size={12} strokeWidth={2} className="text-slate-400" />
+                      <Clock size={13} strokeWidth={2} className="text-slate-400" />
                       <span>Depart later?</span>
                     </button>
                   ) : (
                     <div className="flex items-center justify-between gap-2 bg-[#0E1626] p-2 rounded-xl border border-white/10">
                       <div className="flex items-center gap-2">
                         <Clock size={12} strokeWidth={2} className="text-cyan-400 shrink-0" />
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">Depart at:</span>
+                        <span className="text-[10px] font-sans text-slate-400 uppercase tracking-wider font-bold">Depart at:</span>
                         <input
                           type="time"
                           value={customTimeInput}
                           onChange={(e) => setCustomTimeInput(e.target.value)}
-                          className="bg-black/40 text-white border border-white/15 rounded-lg px-2 py-0.5 text-xs font-mono focus:outline-none focus:border-cyan-500"
+                          className="bg-black/40 text-white border border-white/15 rounded-lg px-2 py-0.5 text-xs font-mono font-bold focus:outline-none focus:border-cyan-500"
                         />
                       </div>
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={handleApplyCustomTime}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${currentTheme.timeButton}`}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-sans font-bold transition-colors ${currentTheme.timeButton}`}
                         >
                           Check
                         </button>
@@ -674,16 +674,16 @@ export function NetworkView() {
                     }}
                   >
                     <div
-                      className="flex items-center gap-2 text-xs font-semibold"
+                      className="flex items-center gap-2 text-xs font-sans font-semibold"
                       style={{ color: currentTheme.accentPrimary }}
                     >
                       <Clock size={12} />
-                      <span>Departing after {formatTime12h(selectedTime)}</span>
+                      <span>Departing after <strong className="font-mono font-bold">{formatTime12h(selectedTime)}</strong></span>
                     </div>
                     <button
                       type="button"
                       onClick={handleResetToNow}
-                      className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded border border-white/10 transition-colors"
+                      className="flex items-center gap-1 text-[11px] font-sans font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded border border-white/10 transition-colors"
                       title="Reset to current time"
                     >
                       <span>Live</span>
@@ -703,10 +703,10 @@ export function NetworkView() {
                 {tripPlan.journeyTrains && tripPlan.journeyTrains.length > 0 ? (
                   <>
                     <div className="flex items-center justify-between px-1">
-                      <span className="font-mono text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                      <span className="font-sans text-[11px] text-slate-300 uppercase tracking-wider font-extrabold">
                         {tripPlan.isCustomTime ? 'SCHEDULED DEPARTURES' : 'AVAILABLE TRAINS'}
                       </span>
-                      <span className="font-mono text-[10px] text-slate-500">
+                      <span className="font-sans text-[11px] text-slate-400 font-medium">
                         Select train to track
                       </span>
                     </div>
@@ -736,11 +736,11 @@ export function NetworkView() {
                                       boxShadow: `0 0 0 4px ${currentTheme.accentPrimary}33`,
                                     }}
                                   />
-                                  <span className="font-mono text-sm font-bold text-white uppercase tracking-wide">
+                                  <span className="font-sans text-sm sm:text-base font-extrabold text-white tracking-tight">
                                     TRAIN {train.displayId}
                                   </span>
                                   <span
-                                    className={`font-mono text-[9px] uppercase px-2 py-0.5 rounded ${currentTheme.activeBadgeBg} border ${currentTheme.activeBadgeBorder} ${currentTheme.activeBadgeText} font-semibold`}
+                                    className={`font-sans text-[10px] uppercase px-2 py-0.5 rounded ${currentTheme.activeBadgeBg} border ${currentTheme.activeBadgeBorder} ${currentTheme.activeBadgeText} font-bold tracking-wider`}
                                   >
                                     {idx === 0
                                       ? tripPlan.isCustomTime
@@ -751,7 +751,7 @@ export function NetworkView() {
                                 </div>
 
                                 <span
-                                  className="font-mono text-xs font-bold"
+                                  className="font-mono text-xs sm:text-sm font-bold tabular-nums"
                                   style={{ color: currentTheme.accentPrimary }}
                                 >
                                   {train.departureDisplay}
@@ -760,19 +760,19 @@ export function NetworkView() {
 
                               {/* Live/Scheduled Status */}
                               <div
-                                className={`text-xs font-mono text-slate-300 pl-3 border-l-2 ${currentTheme.statusBorder}`}
+                                className={`text-xs font-sans text-slate-300 pl-3 border-l-2 ${currentTheme.statusBorder}`}
                               >
-                                Status: <span className="text-white font-medium">{train.status}</span>
+                                Status: <span className="text-white font-semibold">{train.status}</span>
                               </div>
 
                               {/* Single Non-Redundant Journey Summary Bar */}
-                              <div className="p-2.5 sm:p-3 rounded-xl bg-[#0B0F19]/90 border border-white/10 flex items-center justify-between font-mono text-[11px] sm:text-xs shadow-sm">
-                                <span className="text-slate-200 font-medium">
+                              <div className="p-2.5 sm:p-3 rounded-xl bg-[#0B0F19]/90 border border-white/10 flex items-center justify-between font-sans text-[11px] sm:text-xs shadow-sm">
+                                <span className="text-slate-200 font-semibold">
                                   {train.rideMinutes || tripPlan.rideMinutes} mins • {tripPlan.hops} stops
                                 </span>
                                 <span className="text-slate-600">•</span>
                                 <span
-                                  className="font-bold"
+                                  className="font-mono font-bold"
                                   style={{
                                     color:
                                       currentTheme.accentSecondary === '#FFFFFF'
@@ -783,8 +783,8 @@ export function NetworkView() {
                                   Fare ₹{tripPlan.fare}
                                 </span>
                                 <span className="text-slate-600">•</span>
-                                <span className="text-slate-200 font-medium">
-                                  Reaching {train.arrTime || '--:--'}
+                                <span className="text-slate-200 font-semibold">
+                                  Reaching <strong className="font-mono font-bold text-white">{train.arrTime || '--:--'}</strong>
                                 </span>
                               </div>
                             </motion.div>
@@ -797,24 +797,24 @@ export function NetworkView() {
                             key={train.id || idx}
                             layout
                             onClick={() => setSelectedTrainIdx(idx)}
-                            className={`p-3 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-mono text-xs text-slate-300 cursor-pointer transition-all group`}
+                            className={`p-3 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-sans text-xs text-slate-300 cursor-pointer transition-all group`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div
                                 className="w-1.5 h-1.5 rounded-full transition-colors shrink-0"
                                 style={{ backgroundColor: currentTheme.accentPrimary }}
                               />
-                              <span className="font-bold text-white shrink-0">
+                              <span className="font-bold text-white shrink-0 tracking-tight">
                                 Train {train.displayId}
                               </span>
                               <span className="text-slate-600">•</span>
-                              <span className="text-slate-400 text-[11px] truncate">
+                              <span className="text-slate-400 text-[11px] font-medium truncate">
                                 {train.status}
                               </span>
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0 ml-2">
-                              <span className="text-slate-300 font-medium text-[11px]">
+                              <span className="text-slate-200 font-mono font-bold text-[11px] tabular-nums">
                                 {train.departureDisplay}
                               </span>
                               <ChevronDown size={14} className="text-slate-500 group-hover:text-white transition-colors" />
@@ -825,7 +825,7 @@ export function NetworkView() {
                     </div>
                   </>
                 ) : (
-                  <div className="p-6 rounded-2xl border border-white/10 bg-[#0B0F19]/80 text-center font-mono text-xs text-slate-400">
+                  <div className="p-6 rounded-2xl border border-white/10 bg-[#0B0F19]/80 text-center font-sans text-xs font-medium text-slate-400">
                     {isLoadingSchedule ? 'Checking metro schedules...' : 'No upcoming trains found for this route.'}
                   </div>
                 )}
@@ -843,10 +843,10 @@ export function NetworkView() {
                     className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 transition-colors duration-300`}
                   >
                     <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <span className="font-mono text-xs font-bold text-white uppercase tracking-wide">
+                      <span className="font-sans text-sm font-bold text-white tracking-tight">
                         Towards Aluva
                       </span>
-                      <span className="font-mono text-[10px] text-slate-500 font-semibold">
+                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                         Platform 1
                       </span>
                     </div>
@@ -856,20 +856,20 @@ export function NetworkView() {
                         {liveStationArrivals.north.slice(0, 3).map((arr, idx) => (
                           <div
                             key={arr.train.id}
-                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-mono text-xs text-slate-300 transition-colors`}
+                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-sans text-xs text-slate-300 transition-colors`}
                           >
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-white">
+                              <span className="font-bold text-white tracking-tight">
                                 Train {arr.train.id.replace('KMRL-', '')}
                               </span>
                               <span className="text-slate-600">•</span>
-                              <span className="text-slate-400 text-[11px] truncate max-w-[170px]">
+                              <span className="text-slate-400 text-[11px] font-medium truncate max-w-[170px]">
                                 {arr.currentLocation}
                               </span>
                             </div>
 
                             <span
-                              className="font-bold"
+                              className="font-mono font-bold text-xs tabular-nums"
                               style={{ color: idx === 0 ? currentTheme.accentPrimary : '#94A3B8' }}
                             >
                               {arr.etaSeconds <= 0
@@ -880,7 +880,7 @@ export function NetworkView() {
                         ))}
                       </div>
                     ) : (
-                      <div className="font-mono text-xs text-slate-500 py-2 text-center">
+                      <div className="font-sans text-xs font-medium text-slate-500 py-2 text-center">
                         No trains currently approaching
                       </div>
                     )}
@@ -893,10 +893,10 @@ export function NetworkView() {
                     className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 transition-colors duration-300`}
                   >
                     <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <span className="font-mono text-xs font-bold text-white uppercase tracking-wide">
+                      <span className="font-sans text-sm font-bold text-white tracking-tight">
                         Towards Thripunithura
                       </span>
-                      <span className="font-mono text-[10px] text-slate-500 font-semibold">
+                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                         Platform 2
                       </span>
                     </div>
@@ -906,20 +906,20 @@ export function NetworkView() {
                         {liveStationArrivals.south.slice(0, 3).map((arr, idx) => (
                           <div
                             key={arr.train.id}
-                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-mono text-xs text-slate-300 transition-colors`}
+                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-sans text-xs text-slate-300 transition-colors`}
                           >
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-white">
+                              <span className="font-bold text-white tracking-tight">
                                 Train {arr.train.id.replace('KMRL-', '')}
                               </span>
                               <span className="text-slate-600">•</span>
-                              <span className="text-slate-400 text-[11px] truncate max-w-[170px]">
+                              <span className="text-slate-400 text-[11px] font-medium truncate max-w-[170px]">
                                 {arr.currentLocation}
                               </span>
                             </div>
 
                             <span
-                              className="font-bold"
+                              className="font-mono font-bold text-xs tabular-nums"
                               style={{ color: idx === 0 ? currentTheme.accentPrimary : '#94A3B8' }}
                             >
                               {arr.etaSeconds <= 0
@@ -930,7 +930,7 @@ export function NetworkView() {
                         ))}
                       </div>
                     ) : (
-                      <div className="font-mono text-xs text-slate-500 py-2 text-center">
+                      <div className="font-sans text-xs font-medium text-slate-500 py-2 text-center">
                         No trains currently approaching
                       </div>
                     )}

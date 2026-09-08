@@ -302,7 +302,7 @@ export function MapBase({
                 {/* Precision Schematic Typography */}
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none whitespace-nowrap z-10">
                   <span
-                    className={`font-mono text-[9px] tracking-wider uppercase transition-colors ${
+                    className={`font-sans text-[10px] tracking-tight font-semibold transition-colors ${
                       isActive
                         ? 'text-white font-bold'
                         : 'text-slate-400 group-hover:text-slate-200'
