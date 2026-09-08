@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, ArrowUpDown, Clock, X, Sparkles } from 'lucide-react';
+import { ChevronUp, ChevronDown, ArrowUpDown, Clock, X, Sparkles, Moon } from 'lucide-react';
 import { MapBase } from '../components/MapBase.jsx';
 import { useStationContext } from '../context/useStationContext.jsx';
 import {
@@ -54,6 +54,10 @@ export function NetworkView() {
     trains,
     activeTrainsCount,
     istTime,
+    isOpen,
+    serviceStatus,
+    opensAt,
+    nextServiceText,
     stations,
     activeStation,
     setActiveStation,
@@ -456,20 +460,35 @@ export function NetworkView() {
             KOCHI METRO RADAR
           </span>
           <div className="h-3 w-[1px] bg-white/15" />
-          <span className="font-sans text-xs text-slate-300 font-medium">
-            <strong className="font-mono font-bold text-white">{activeTrainsCount}</strong> trains active
-          </span>
+          {isOpen ? (
+            <span className="font-sans text-xs text-slate-300 font-medium">
+              <strong className="font-mono font-bold text-white">{activeTrainsCount}</strong> trains active
+            </span>
+          ) : (
+            <span className="font-sans text-xs text-amber-300 font-semibold flex items-center gap-1.5">
+              Service Closed
+            </span>
+          )}
           <div className="h-3 w-[1px] bg-white/15 hidden sm:block" />
           <span className="font-mono text-xs text-slate-400 hidden sm:inline tabular-nums">
             {istTime || '--:--:--'} <span className="font-sans text-[10px] font-semibold tracking-wider text-slate-500">IST</span>
           </span>
         </div>
 
-        {/* Live Network Telemetry Badge */}
-        <div className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/10 bg-[#0E1626]/85 backdrop-blur-md flex items-center gap-2 shadow-lg">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-          <span className="font-sans text-xs font-extrabold text-white tracking-wider">LIVE</span>
-        </div>
+        {/* Live Network Telemetry / Closed Badge */}
+        {isOpen ? (
+          <div className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/10 bg-[#0E1626]/85 backdrop-blur-md flex items-center gap-2 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="font-sans text-xs font-extrabold text-white tracking-wider">LIVE</span>
+          </div>
+        ) : (
+          <div className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-amber-500/30 bg-[#17141F]/90 backdrop-blur-md flex items-center gap-2 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+            <span className="font-sans text-[11px] sm:text-xs font-bold text-amber-300 tracking-wide uppercase">
+              Opens {opensAt || '06:00 AM'}
+            </span>
+          </div>
+        )}
       </header>
 
       {/* Floating Commuter Drawer / Mobile Bottom Sheet */}
@@ -701,14 +720,27 @@ export function NetworkView() {
             {/* ========================================================================= */}
             {destinationStation && tripPlan && (
               <div className="flex flex-col gap-2.5">
+                {!isOpen && (
+                  <div className="p-3 rounded-xl border border-amber-500/25 bg-amber-500/10 flex items-start gap-2.5 text-xs">
+                    <Moon size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-sans font-bold text-amber-300">Service Closed for the Night</span>
+                      <span className="text-slate-300 text-[11px] leading-relaxed">
+                        Kochi Metro trains have stopped for today. Next morning departures resume at{' '}
+                        <strong className="text-white font-semibold">{opensAt || '06:00 AM'} IST</strong>:
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {tripPlan.journeyTrains && tripPlan.journeyTrains.length > 0 ? (
                   <>
                     <div className="flex items-center justify-between px-1">
                       <span className="font-sans text-[11px] text-slate-300 uppercase tracking-wider font-extrabold">
-                        {tripPlan.isCustomTime ? 'SCHEDULED DEPARTURES' : 'AVAILABLE TRAINS'}
+                        {tripPlan.isCustomTime ? 'SCHEDULED DEPARTURES' : isOpen ? 'AVAILABLE TRAINS' : 'MORNING DEPARTURES'}
                       </span>
                       <span className="font-sans text-[11px] text-slate-400 font-medium">
-                        Select train to track
+                        {isOpen ? 'Select train to track' : `First train at ${opensAt || '06:00 AM'}`}
                       </span>
                     </div>
 
@@ -881,8 +913,15 @@ export function NetworkView() {
                         ))}
                       </div>
                     ) : (
-                      <div className="font-sans text-xs font-medium text-slate-500 py-2 text-center">
-                        No trains currently approaching
+                      <div className="font-sans text-xs font-medium py-3 text-center flex flex-col items-center gap-1">
+                        {!isOpen ? (
+                          <>
+                            <span className="text-amber-300/90 font-semibold">Service Closed for the Night</span>
+                            <span className="text-slate-400 text-[11px]">First northbound train departs at {opensAt || '06:00 AM'} IST</span>
+                          </>
+                        ) : (
+                          <span className="text-slate-500">No trains currently approaching</span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -931,8 +970,15 @@ export function NetworkView() {
                         ))}
                       </div>
                     ) : (
-                      <div className="font-sans text-xs font-medium text-slate-500 py-2 text-center">
-                        No trains currently approaching
+                      <div className="font-sans text-xs font-medium py-3 text-center flex flex-col items-center gap-1">
+                        {!isOpen ? (
+                          <>
+                            <span className="text-amber-300/90 font-semibold">Service Closed for the Night</span>
+                            <span className="text-slate-400 text-[11px]">First southbound train departs at {opensAt || '06:00 AM'} IST</span>
+                          </>
+                        ) : (
+                          <span className="text-slate-500">No trains currently approaching</span>
+                        )}
                       </div>
                     )}
                   </div>

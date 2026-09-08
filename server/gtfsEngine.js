@@ -212,15 +212,15 @@ export class GTFSEngine {
       currentSec = hh * 3600 + mm * 60 + ss;
     }
 
-    // Operational hours check: Kochi Metro runs ~06:00 to 22:30 IST.
-    // If outside operating window, wrap to a peak hour (e.g. 10:00 to 14:00) so client can test and view trains
     let effectiveSec = currentSec;
-    let isSimulatedClock = false;
-    if (currentSec < 6 * 3600 || currentSec > 22.5 * 3600) {
-      isSimulatedClock = true;
-      // Map night time into a lively 4-hour window from 09:30 AM to 13:30 PM
-      effectiveSec = 9.5 * 3600 + (currentSec % (4 * 3600));
-    }
+
+    const now = new Date();
+    const istDay = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short',
+    }).format(now);
+    const isSunday = istDay === 'Sun';
+    const expectedService = isSunday ? 'WE' : 'WK';
 
     const activeTrains = [];
 
@@ -228,17 +228,7 @@ export class GTFSEngine {
       if (!stList || stList.length < 2) continue;
 
       const trip = this.trips.get(tripId);
-      if (!trip) continue;
-
-      // Filter by current day of week (WK = Mon-Sat, WE = Sun)
-      const now = new Date();
-      const istDay = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Kolkata',
-        weekday: 'short',
-      }).format(now);
-      const isSunday = istDay === 'Sun';
-      const expectedService = isSunday ? 'WE' : 'WK';
-      if (trip.service_id !== expectedService) continue;
+      if (!trip || trip.service_id !== expectedService) continue;
 
       const tripStart = stList[0].dep_sec;
       const tripEnd = stList[stList.length - 1].arr_sec;
@@ -338,10 +328,31 @@ export class GTFSEngine {
       }
     }
 
+    const isOpen = activeTrains.length > 0;
+    const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
+    const isTomorrowSunday =
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        weekday: 'short',
+      }).format(tomorrow) === 'Sun';
+
+    const isEarlyMorning = currentSec < 6 * 3600;
+    const opensAt = isEarlyMorning
+      ? (isSunday ? '06:30 AM' : '06:00 AM')
+      : (isTomorrowSunday ? '06:30 AM' : '06:00 AM');
+
+    const nextServiceText = isEarlyMorning
+      ? `Opens today at ${opensAt} IST`
+      : `Opens tomorrow at ${opensAt} IST`;
+
     return {
       timestamp: new Date().toISOString(),
       istTime: new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }),
-      isSimulatedClock,
+      isSimulatedClock: false,
+      isOpen,
+      serviceStatus: isOpen ? 'open' : 'closed',
+      opensAt,
+      nextServiceText,
       activeTrainsCount: activeTrains.length,
       trains: activeTrains,
     };
@@ -361,7 +372,9 @@ export class GTFSEngine {
     const normDest = normalizeId(destId);
 
     let targetSec;
+    let isUserSpecifiedTime = false;
     if (timeStr && timeStr.includes(':')) {
+      isUserSpecifiedTime = true;
       const [hh, mm] = timeStr.split(':').map(Number);
       targetSec = hh * 3600 + mm * 60;
     } else {
@@ -374,10 +387,6 @@ export class GTFSEngine {
       targetSec = hh * 3600 + mm * 60 + ss;
     }
 
-    if (targetSec < 6 * 3600 || targetSec > 22.5 * 3600) {
-      targetSec = 9.5 * 3600 + (targetSec % (4 * 3600));
-    }
-
     const now = new Date();
     const istDay = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Kolkata',
@@ -385,50 +394,72 @@ export class GTFSEngine {
     }).format(now);
     const expectedService = istDay === 'Sun' ? 'WE' : 'WK';
 
-    const matches = [];
+    const format12h = (sec, isNextDay = false) => {
+      const h = Math.floor(sec / 3600) % 24;
+      const m = Math.floor((sec % 3600) / 60);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      const timeStr = `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+      return isNextDay ? `Tomorrow ${timeStr}` : timeStr;
+    };
 
-    for (const [tripId, stList] of this.stopTimesByTrip.entries()) {
-      const trip = this.trips.get(tripId);
-      if (!trip || trip.service_id !== expectedService) continue;
+    const findDepartures = (serviceId, minSec, isNextDay = false) => {
+      const list = [];
+      for (const [tripId, stList] of this.stopTimesByTrip.entries()) {
+        const trip = this.trips.get(tripId);
+        if (!trip || trip.service_id !== serviceId) continue;
 
-      const oIdx = stList.findIndex((s) => s.stop_id === normOrigin);
-      if (oIdx === -1) continue;
-      const oStop = stList[oIdx];
+        const oIdx = stList.findIndex((s) => s.stop_id === normOrigin);
+        if (oIdx === -1) continue;
+        const oStop = stList[oIdx];
 
-      let dStop = null;
-      if (normDest) {
-        const dIdx = stList.findIndex((s) => s.stop_id === normDest);
-        if (dIdx <= oIdx) continue;
-        dStop = stList[dIdx];
+        let dStop = null;
+        if (normDest) {
+          const dIdx = stList.findIndex((s) => s.stop_id === normDest);
+          if (dIdx <= oIdx) continue;
+          dStop = stList[dIdx];
+        }
+
+        if (oStop.dep_sec >= minSec) {
+          const trainNumber = tripId.replace(/^(WK_|WE_)/, '');
+          const trainCode = `KMRL-${trip.direction_id === 0 ? 'S' : 'N'}${trainNumber.padStart(2, '0')}`;
+          const rideMinutes = dStop ? Math.round((dStop.arr_sec - oStop.dep_sec) / 60) : null;
+          const etaFromTarget = isNextDay ? (86400 - targetSec) + oStop.dep_sec : oStop.dep_sec - targetSec;
+
+          list.push({
+            trainId: trainCode,
+            tripId,
+            directionId: trip.direction_id,
+            depSec: isNextDay ? oStop.dep_sec + 86400 : oStop.dep_sec,
+            depTime: format12h(oStop.dep_sec, isNextDay),
+            rawDepTime: format12h(oStop.dep_sec, false),
+            arrTime: dStop ? format12h(dStop.arr_sec, isNextDay) : null,
+            isTomorrow: isNextDay,
+            rideMinutes,
+            etaSeconds: etaFromTarget,
+            originName: this.stops.get(normOrigin)?.name || normOrigin,
+            destName: normDest ? (this.stops.get(normDest)?.name || normDest) : null,
+          });
+        }
       }
+      return list;
+    };
 
-      if (oStop.dep_sec >= targetSec) {
-        const trainNumber = tripId.replace(/^(WK_|WE_)/, '');
-        const trainCode = `KMRL-${trip.direction_id === 0 ? 'S' : 'N'}${trainNumber.padStart(2, '0')}`;
-        const rideMinutes = dStop ? Math.round((dStop.arr_sec - oStop.dep_sec) / 60) : null;
-        const etaFromTarget = oStop.dep_sec - targetSec;
+    // 1. Search remaining departures today
+    let matches = findDepartures(expectedService, targetSec, false);
 
-        const format12h = (sec) => {
-          const h = Math.floor(sec / 3600) % 24;
-          const m = Math.floor((sec % 3600) / 60);
-          const ampm = h >= 12 ? 'PM' : 'AM';
-          const h12 = h % 12 || 12;
-          return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
-        };
+    // 2. If no remaining departures tonight and user is viewing live mode, fetch tomorrow morning's first trains!
+    if (matches.length < limit && !isUserSpecifiedTime) {
+      const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
+      const isTomorrowSunday =
+        new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Kolkata',
+          weekday: 'short',
+        }).format(tomorrow) === 'Sun';
+      const tomorrowService = isTomorrowSunday ? 'WE' : 'WK';
 
-        matches.push({
-          trainId: trainCode,
-          tripId,
-          directionId: trip.direction_id,
-          depSec: oStop.dep_sec,
-          depTime: format12h(oStop.dep_sec),
-          arrTime: dStop ? format12h(dStop.arr_sec) : null,
-          rideMinutes,
-          etaSeconds: etaFromTarget,
-          originName: this.stops.get(normOrigin)?.name || normOrigin,
-          destName: normDest ? (this.stops.get(normDest)?.name || normDest) : null,
-        });
-      }
+      const tomorrowMatches = findDepartures(tomorrowService, 0, true);
+      matches = [...matches, ...tomorrowMatches];
     }
 
     matches.sort((a, b) => a.depSec - b.depSec);

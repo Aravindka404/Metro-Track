@@ -7,6 +7,10 @@ export function StationProvider({ children }) {
   const [trains, setTrains] = useState([]);
   const [istTime, setIstTime] = useState('');
   const [isSimulated, setIsSimulated] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
+  const [serviceStatus, setServiceStatus] = useState('open');
+  const [opensAt, setOpensAt] = useState('06:00 AM');
+  const [nextServiceText, setNextServiceText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [stations, setStations] = useState([]);
   const [tracksGeoJSON, setTracksGeoJSON] = useState(null);
@@ -55,6 +59,15 @@ export function StationProvider({ children }) {
           setIstTime(payload.istTime || '');
           setIsSimulated(Boolean(payload.isSimulatedClock));
           setTrains(payload.trains || []);
+          if (payload.serviceStatus) {
+            setServiceStatus(payload.serviceStatus);
+            setIsOpen(payload.serviceStatus === 'open');
+          } else if (typeof payload.isOpen === 'boolean') {
+            setIsOpen(payload.isOpen);
+            setServiceStatus(payload.isOpen ? 'open' : 'closed');
+          }
+          if (payload.opensAt) setOpensAt(payload.opensAt);
+          if (payload.nextServiceText) setNextServiceText(payload.nextServiceText);
           setConnectionStatus('connected');
         }
       } catch (err) {
@@ -117,6 +130,15 @@ export function StationProvider({ children }) {
         setIstTime(payload.istTime || '');
         setIsSimulated(Boolean(payload.isSimulatedClock));
         setTrains(payload.trains || []);
+        if (payload.serviceStatus) {
+          setServiceStatus(payload.serviceStatus);
+          setIsOpen(payload.serviceStatus === 'open');
+        } else if (typeof payload.isOpen === 'boolean') {
+          setIsOpen(payload.isOpen);
+          setServiceStatus(payload.isOpen ? 'open' : 'closed');
+        }
+        if (payload.opensAt) setOpensAt(payload.opensAt);
+        if (payload.nextServiceText) setNextServiceText(payload.nextServiceText);
       });
     } else {
       // 100% Vercel deployment: use regular 3.5s HTTP polling
@@ -143,6 +165,10 @@ export function StationProvider({ children }) {
       activeTrainsCount: trains.length,
       istTime,
       isSimulated,
+      isOpen,
+      serviceStatus,
+      opensAt,
+      nextServiceText,
       connectionStatus,
       stations,
       tracksGeoJSON,
@@ -158,6 +184,10 @@ export function StationProvider({ children }) {
       trains,
       istTime,
       isSimulated,
+      isOpen,
+      serviceStatus,
+      opensAt,
+      nextServiceText,
       connectionStatus,
       stations,
       tracksGeoJSON,
