@@ -4,8 +4,23 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.resolve(__dirname, '../data');
-const GTFS_DIR = path.join(DATA_DIR, 'gtfs');
+
+export function findGtfsDir() {
+  const candidates = [
+    path.resolve(__dirname, '../data/gtfs'),
+    path.resolve(process.cwd(), 'data/gtfs'),
+    path.resolve(process.cwd(), '../data/gtfs'),
+    path.resolve(__dirname, '../../data/gtfs'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'stops.txt'))) {
+      return candidate;
+    }
+  }
+  return path.resolve(__dirname, '../data/gtfs');
+}
+
+let GTFS_DIR = findGtfsDir();
 
 // Haversine / Bearing Helpers
 function toRad(deg) {
@@ -46,6 +61,8 @@ export class GTFSEngine {
   }
 
   load() {
+    if (this.isLoaded) return;
+    GTFS_DIR = findGtfsDir();
     console.log('[GTFSEngine] Loading GTFS files from:', GTFS_DIR);
 
     // 1. Stops

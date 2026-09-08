@@ -37,36 +37,97 @@ export function StationProvider({ children }) {
       .catch((err) => console.error('Error fetching tracks:', err));
   }, []);
 
-  // 2. Connect to WebSocket
+  // 2. Connect to WebSocket or fallback to HTTP polling (for Vercel Serverless)
   useEffect(() => {
-    // Connect to custom backend URL if specified (e.g. Vercel deployment pointing to Render),
-    // or port 4000 in local Vite dev (port 3000), or current origin when fullstack served.
+    let pollingInterval = null;
+    let isSocketConnected = false;
+
+    const apiBase = import.meta.env.VITE_BACKEND_URL || '';
+    const trainsApiUrl = `${apiBase}/api/trains`;
+
+    // Fetch live train telemetry via Serverless HTTP endpoint
+    const fetchTrainsPoll = async () => {
+      try {
+        const res = await fetch(trainsApiUrl);
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (payload) {
+          setIstTime(payload.istTime || '');
+          setIsSimulated(Boolean(payload.isSimulatedClock));
+          setTrains(payload.trains || []);
+          setConnectionStatus('connected');
+        }
+      } catch (err) {
+        console.warn('[HTTP Polling] Error fetching trains:', err);
+      }
+    };
+
+    // Immediate initial fetch for instantaneous load without waiting
+    fetchTrainsPoll();
+
     const socketHost =
       import.meta.env.VITE_BACKEND_URL ||
       (window.location.port === '3000' ? 'http://localhost:4000' : window.location.origin);
-    const socket = io(socketHost, {
-      reconnection: true,
-      reconnectionDelay: 1500,
-    });
 
-    socket.on('connect', () => {
-      setConnectionStatus('connected');
-      console.log('[Socket.io] Connected to KMRL backend');
-    });
+    const isLocalOrHasBackend =
+      Boolean(import.meta.env.VITE_BACKEND_URL) || window.location.port === '3000';
 
-    socket.on('disconnect', () => {
-      setConnectionStatus('disconnected');
-    });
+    let socket = null;
 
-    socket.on('trains:update', (payload) => {
-      if (!payload) return;
-      setIstTime(payload.istTime || '');
-      setIsSimulated(Boolean(payload.isSimulatedClock));
-      setTrains(payload.trains || []);
-    });
+    const startPolling = () => {
+      if (!pollingInterval) {
+        pollingInterval = setInterval(fetchTrainsPoll, 3500);
+      }
+    };
+
+    const stopPolling = () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+    };
+
+    if (isLocalOrHasBackend) {
+      socket = io(socketHost, {
+        reconnection: true,
+        reconnectionDelay: 2000,
+        timeout: 3000,
+      });
+
+      socket.on('connect', () => {
+        isSocketConnected = true;
+        stopPolling();
+        setConnectionStatus('connected');
+        console.log('[Socket.io] Connected to KMRL backend');
+      });
+
+      socket.on('disconnect', () => {
+        isSocketConnected = false;
+        startPolling();
+      });
+
+      socket.on('connect_error', () => {
+        if (!isSocketConnected) {
+          startPolling();
+        }
+      });
+
+      socket.on('trains:update', (payload) => {
+        if (!payload) return;
+        setIstTime(payload.istTime || '');
+        setIsSimulated(Boolean(payload.isSimulatedClock));
+        setTrains(payload.trains || []);
+      });
+    } else {
+      // 100% Vercel deployment: use regular 3.5s HTTP polling
+      startPolling();
+    }
 
     return () => {
-      socket.disconnect();
+      stopPolling();
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, []);
 
