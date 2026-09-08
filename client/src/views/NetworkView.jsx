@@ -10,6 +10,7 @@ import {
   getStationHopCount,
   normalizeStationId,
 } from '../utils/fareCalculator.js';
+import { THEMES, getStoredTheme, saveTheme } from '../utils/themeConfig.js';
 
 // Precision Haversine algorithm for nearest station detection
 function getNearestStation(userLat, userLon, stations) {
@@ -82,6 +83,15 @@ export function NetworkView() {
   useEffect(() => {
     setSelectedTrainIdx(0);
   }, [currentStation?.id, destinationStation?.id, selectedTime]);
+
+  // Active theme state (kmrl, swiss, nordic)
+  const [activeThemeId, setActiveThemeId] = useState(() => getStoredTheme());
+  const currentTheme = THEMES[activeThemeId] || THEMES.kmrl;
+
+  const handleSelectTheme = (themeId) => {
+    setActiveThemeId(themeId);
+    saveTheme(themeId);
+  };
 
   // Responsive mobile state
   const [isMobile, setIsMobile] = useState(
@@ -425,7 +435,10 @@ export function NetworkView() {
   const activeTrain = tripPlan?.journeyTrains?.[selectedTrainIdx] || tripPlan?.journeyTrains?.[0];
 
   return (
-    <div className="w-full min-h-[100dvh] h-[100dvh] relative overflow-hidden bg-[#0B0F19] text-white font-sans select-none overscroll-y-contain">
+    <div
+      className="w-full min-h-[100dvh] h-[100dvh] relative overflow-hidden text-white font-sans select-none overscroll-y-contain transition-colors duration-300"
+      style={{ backgroundColor: currentTheme.bgApp }}
+    >
       {/* 2D Schematic Circuit Map */}
       <MapBase
         viewState={viewState}
@@ -438,11 +451,12 @@ export function NetworkView() {
             ? { originId: currentStation.id, destinationId: destinationStation.id }
             : null
         }
+        theme={currentTheme}
       />
 
       {/* Clean Minimal Header Bar */}
-      <header className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-20 flex items-center justify-between pointer-events-none">
-        <div className="pointer-events-auto px-4 py-2.5 rounded-xl border border-white/10 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-3 shadow-lg">
+      <header className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-20 flex items-center justify-between pointer-events-none gap-2">
+        <div className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-white/10 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-2.5 sm:gap-3 shadow-lg">
           <span className="font-mono text-xs font-bold tracking-widest text-white uppercase">
             KOCHI METRO
           </span>
@@ -454,6 +468,25 @@ export function NetworkView() {
           <span className="font-mono text-[11px] text-slate-400 hidden sm:inline">
             {istTime || '--:--:--'} IST
           </span>
+        </div>
+
+        {/* 3-Way Instant Theme Switcher */}
+        <div className="pointer-events-auto p-1 rounded-xl border border-white/10 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-1 shadow-lg font-mono text-[10px] font-bold">
+          {Object.values(THEMES).map((th) => {
+            const isActive = activeThemeId === th.id;
+            return (
+              <button
+                key={th.id}
+                onClick={() => handleSelectTheme(th.id)}
+                className={`px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg transition-all ${
+                  isActive ? th.pillActive : th.pillInactive
+                }`}
+                title={th.description}
+              >
+                {th.shortName}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -473,7 +506,9 @@ export function NetworkView() {
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className="absolute bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[460px] z-30 pointer-events-auto overscroll-y-contain"
       >
-        <div className="p-4 sm:p-5 rounded-t-3xl sm:rounded-2xl border border-white/10 bg-[#0D1526]/95 backdrop-blur-xl flex flex-col gap-3.5 max-h-[85vh] sm:max-h-[82vh] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+        <div
+          className={`p-4 sm:p-5 rounded-t-3xl sm:rounded-2xl border ${currentTheme.drawerBorder} ${currentTheme.drawerBg} backdrop-blur-xl flex flex-col gap-3.5 max-h-[85vh] sm:max-h-[82vh] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.6)] transition-colors duration-300`}
+        >
           {/* Mobile Swipe Grab Bar */}
           <div
             onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
@@ -501,10 +536,20 @@ export function NetworkView() {
           {/* Drawer Body Area */}
           <div className="overflow-y-auto flex flex-col gap-3.5 pr-1 pb-1">
             {/* Premium Station Selector Card */}
-            <div className="p-3.5 sm:p-4 rounded-2xl border border-white/10 bg-[#0B0F19]/90 flex flex-col gap-2.5 relative shadow-inner">
+            <div
+              className={`p-3.5 sm:p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 relative shadow-inner transition-colors duration-300`}
+            >
               {/* Boarding Station Field */}
-              <div className="flex items-center gap-3 p-2.5 sm:p-3 rounded-xl bg-[#0E1626] border border-white/10 focus-within:border-emerald-500/60 transition-colors pr-12">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20 shrink-0" />
+              <div
+                className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors pr-12`}
+              >
+                <div
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{
+                    backgroundColor: currentTheme.accentPrimary,
+                    boxShadow: `0 0 0 4px ${currentTheme.accentPrimary}33`,
+                  }}
+                />
                 <div className="flex flex-col flex-1 min-w-0">
                   <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
                     BOARDING FROM
@@ -532,15 +577,23 @@ export function NetworkView() {
                   onClick={handleSwapStations}
                   disabled={!destinationStation}
                   title="Swap Stations"
-                  className="p-2 rounded-full bg-[#162238] border border-white/20 text-slate-300 hover:text-white hover:border-white/40 disabled:opacity-20 disabled:cursor-not-allowed shadow-xl active:scale-90 transition-all"
+                  className={`p-2 rounded-full border shadow-xl active:scale-90 transition-all ${currentTheme.swapBtn} disabled:opacity-20 disabled:cursor-not-allowed`}
                 >
                   <ArrowUpDown size={14} strokeWidth={2.5} />
                 </button>
               </div>
 
               {/* Destination Station Field */}
-              <div className="flex items-center gap-3 p-2.5 sm:p-3 rounded-xl bg-[#0E1626] border border-white/10 focus-within:border-cyan-500/60 transition-colors pr-12">
-                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 ring-4 ring-cyan-500/20 shrink-0" />
+              <div
+                className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors pr-12`}
+              >
+                <div
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{
+                    backgroundColor: currentTheme.accentSecondary === '#FFFFFF' ? '#FFFFFF' : currentTheme.accentSecondary,
+                    boxShadow: `0 0 0 4px ${currentTheme.accentSecondary}33`,
+                  }}
+                />
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
@@ -588,7 +641,7 @@ export function NetworkView() {
                     <button
                       type="button"
                       onClick={() => setIsTimePickerOpen(true)}
-                      className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-cyan-300 transition-colors py-0.5 px-1 rounded active:scale-95"
+                      className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors py-0.5 px-1 rounded active:scale-95"
                     >
                       <Clock size={12} strokeWidth={2} className="text-slate-400" />
                       <span>Depart later?</span>
@@ -609,7 +662,7 @@ export function NetworkView() {
                         <button
                           type="button"
                           onClick={handleApplyCustomTime}
-                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/40 transition-colors"
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${currentTheme.timeButton}`}
                         >
                           Check
                         </button>
@@ -625,9 +678,18 @@ export function NetworkView() {
                     </div>
                   )
                 ) : (
-                  <div className="flex items-center justify-between bg-cyan-950/40 border border-cyan-500/30 px-3 py-1.5 rounded-xl">
-                    <div className="flex items-center gap-2 text-cyan-300 text-xs font-semibold">
-                      <Clock size={12} className="text-cyan-400" />
+                  <div
+                    className="flex items-center justify-between border px-3 py-1.5 rounded-xl"
+                    style={{
+                      backgroundColor: `${currentTheme.accentPrimary}15`,
+                      borderColor: `${currentTheme.accentPrimary}40`,
+                    }}
+                  >
+                    <div
+                      className="flex items-center gap-2 text-xs font-semibold"
+                      style={{ color: currentTheme.accentPrimary }}
+                    >
+                      <Clock size={12} />
                       <span>Departing after {formatTime12h(selectedTime)}</span>
                     </div>
                     <button
@@ -674,16 +736,24 @@ export function NetworkView() {
                               initial={{ opacity: 0.85, scale: 0.98 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ duration: 0.18 }}
-                              className="p-4 rounded-2xl border border-cyan-500/40 bg-gradient-to-b from-[#0E223D]/85 to-[#0A1629]/90 flex flex-col gap-3 shadow-[0_8px_30px_rgba(6,182,212,0.14)]"
+                              className={`p-4 rounded-2xl border ${currentTheme.expandedTrainBorder} ${currentTheme.expandedTrainBg} flex flex-col gap-3 ${currentTheme.expandedTrainShadow} transition-colors duration-300`}
                             >
                               {/* Header Row */}
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 ring-4 ring-cyan-500/20 animate-pulse" />
+                                  <div
+                                    className="w-2.5 h-2.5 rounded-full ring-4 animate-pulse"
+                                    style={{
+                                      backgroundColor: currentTheme.accentPrimary,
+                                      boxShadow: `0 0 0 4px ${currentTheme.accentPrimary}33`,
+                                    }}
+                                  />
                                   <span className="font-mono text-sm font-bold text-white uppercase tracking-wide">
                                     TRAIN {train.displayId}
                                   </span>
-                                  <span className="font-mono text-[9px] text-cyan-300 uppercase px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-700/60 font-semibold">
+                                  <span
+                                    className={`font-mono text-[9px] uppercase px-2 py-0.5 rounded ${currentTheme.activeBadgeBg} border ${currentTheme.activeBadgeBorder} ${currentTheme.activeBadgeText} font-semibold`}
+                                  >
                                     {idx === 0
                                       ? tripPlan.isCustomTime
                                         ? 'EARLIEST TRAIN'
@@ -692,13 +762,18 @@ export function NetworkView() {
                                   </span>
                                 </div>
 
-                                <span className="font-mono text-xs font-bold text-cyan-300">
+                                <span
+                                  className="font-mono text-xs font-bold"
+                                  style={{ color: currentTheme.accentPrimary }}
+                                >
                                   {train.departureDisplay}
                                 </span>
                               </div>
 
                               {/* Live/Scheduled Status */}
-                              <div className="text-xs font-mono text-slate-300 pl-3 border-l-2 border-cyan-500/40">
+                              <div
+                                className={`text-xs font-mono text-slate-300 pl-3 border-l-2 ${currentTheme.statusBorder}`}
+                              >
                                 Status: <span className="text-white font-medium">{train.status}</span>
                               </div>
 
@@ -708,7 +783,15 @@ export function NetworkView() {
                                   {train.rideMinutes || tripPlan.rideMinutes} mins • {tripPlan.hops} stops
                                 </span>
                                 <span className="text-slate-600">•</span>
-                                <span className="text-[#00A896] font-bold">
+                                <span
+                                  className="font-bold"
+                                  style={{
+                                    color:
+                                      currentTheme.accentSecondary === '#FFFFFF'
+                                        ? currentTheme.accentTertiary
+                                        : currentTheme.accentSecondary,
+                                  }}
+                                >
                                   Fare ₹{tripPlan.fare}
                                 </span>
                                 <span className="text-slate-600">•</span>
@@ -726,10 +809,13 @@ export function NetworkView() {
                             key={train.id || idx}
                             layout
                             onClick={() => setSelectedTrainIdx(idx)}
-                            className="p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] active:bg-white/[0.1] flex items-center justify-between font-mono text-xs text-slate-300 cursor-pointer transition-all group"
+                            className={`p-3 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-mono text-xs text-slate-300 cursor-pointer transition-all group`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-500 group-hover:bg-cyan-400 transition-colors shrink-0" />
+                              <div
+                                className="w-1.5 h-1.5 rounded-full transition-colors shrink-0"
+                                style={{ backgroundColor: currentTheme.accentPrimary }}
+                              />
                               <span className="font-bold text-white shrink-0">
                                 Train {train.displayId}
                               </span>
@@ -743,7 +829,7 @@ export function NetworkView() {
                               <span className="text-slate-300 font-medium text-[11px]">
                                 {train.departureDisplay}
                               </span>
-                              <ChevronDown size={14} className="text-slate-500 group-hover:text-cyan-400 transition-colors" />
+                              <ChevronDown size={14} className="text-slate-500 group-hover:text-white transition-colors" />
                             </div>
                           </motion.div>
                         );
@@ -765,7 +851,9 @@ export function NetworkView() {
               <div className="flex flex-col gap-3">
                 {/* Towards Aluva */}
                 {!isTerminalNorth && (
-                  <div className="p-4 rounded-2xl border border-white/10 bg-[#0B0F19]/70 flex flex-col gap-2.5">
+                  <div
+                    className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 transition-colors duration-300`}
+                  >
                     <div className="flex items-center justify-between border-b border-white/10 pb-2">
                       <span className="font-mono text-xs font-bold text-white uppercase tracking-wide">
                         Towards Aluva
@@ -780,7 +868,7 @@ export function NetworkView() {
                         {liveStationArrivals.north.slice(0, 3).map((arr, idx) => (
                           <div
                             key={arr.train.id}
-                            className="p-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] flex items-center justify-between font-mono text-xs text-slate-300 transition-colors"
+                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-mono text-xs text-slate-300 transition-colors`}
                           >
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-white">
@@ -792,7 +880,10 @@ export function NetworkView() {
                               </span>
                             </div>
 
-                            <span className={idx === 0 ? 'text-[#00A896] font-bold' : 'text-slate-400'}>
+                            <span
+                              className="font-bold"
+                              style={{ color: idx === 0 ? currentTheme.accentPrimary : '#94A3B8' }}
+                            >
                               {arr.etaSeconds <= 0
                                 ? 'Arriving now'
                                 : `in ${Math.floor(arr.etaSeconds / 60)}m ${arr.etaSeconds % 60}s`}
@@ -810,7 +901,9 @@ export function NetworkView() {
 
                 {/* Towards Thripunithura */}
                 {!isTerminalSouth && (
-                  <div className="p-4 rounded-2xl border border-white/10 bg-[#0B0F19]/70 flex flex-col gap-2.5">
+                  <div
+                    className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 transition-colors duration-300`}
+                  >
                     <div className="flex items-center justify-between border-b border-white/10 pb-2">
                       <span className="font-mono text-xs font-bold text-white uppercase tracking-wide">
                         Towards Thripunithura
@@ -825,7 +918,7 @@ export function NetworkView() {
                         {liveStationArrivals.south.slice(0, 3).map((arr, idx) => (
                           <div
                             key={arr.train.id}
-                            className="p-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] flex items-center justify-between font-mono text-xs text-slate-300 transition-colors"
+                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-mono text-xs text-slate-300 transition-colors`}
                           >
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-white">
@@ -837,7 +930,10 @@ export function NetworkView() {
                               </span>
                             </div>
 
-                            <span className={idx === 0 ? 'text-[#00A896] font-bold' : 'text-slate-400'}>
+                            <span
+                              className="font-bold"
+                              style={{ color: idx === 0 ? currentTheme.accentPrimary : '#94A3B8' }}
+                            >
                               {arr.etaSeconds <= 0
                                 ? 'Arriving now'
                                 : `in ${Math.floor(arr.etaSeconds / 60)}m ${arr.etaSeconds % 60}s`}

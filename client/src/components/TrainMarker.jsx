@@ -3,7 +3,7 @@ import { Marker } from 'react-map-gl/maplibre';
 import { motion, useSpring } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
-export function TrainMarker({ train, isSelected = false, isRecommended = false, onSelect }) {
+export function TrainMarker({ train, isSelected = false, isRecommended = false, onSelect, theme }) {
   const navigate = useNavigate();
 
   // Mathematical spring interpolation for coordinates
@@ -44,6 +44,38 @@ export function TrainMarker({ train, isSelected = false, isRecommended = false, 
 
   const trainShortId = train.id.replace('KMRL-', '');
 
+  // Theme-adaptive capsule styles
+  const isSwiss = theme?.id === 'swiss';
+  const isNordic = theme?.id === 'nordic';
+
+  let capsuleClass = 'bg-[#00B4D8] border border-white/30 text-white';
+  let pingClass = 'bg-cyan-400/30';
+
+  if (isRecommended) {
+    if (isSwiss) {
+      capsuleClass = 'bg-[#E11D48] ring-2 ring-white shadow-[0_0_14px_rgba(225,29,72,0.9)] text-white';
+      pingClass = 'bg-rose-500/40';
+    } else if (isNordic) {
+      capsuleClass = 'bg-[#34D399] ring-2 ring-white shadow-[0_0_14px_rgba(52,211,153,0.9)] text-[#0B0F17]';
+      pingClass = 'bg-emerald-400/40';
+    } else {
+      capsuleClass = 'bg-[#FFB703] ring-2 ring-white shadow-[0_0_14px_rgba(255,183,3,0.9)] text-[#061524]';
+      pingClass = 'bg-amber-400/40';
+    }
+  } else if (isSelected) {
+    capsuleClass = isSwiss
+      ? 'bg-zinc-100 ring-2 ring-[#E11D48] text-black font-extrabold'
+      : isNordic
+      ? 'bg-[#38BDF8] ring-1 ring-white text-black'
+      : 'bg-[#00A896] ring-1 ring-white text-white';
+  } else {
+    capsuleClass = isSwiss
+      ? 'bg-[#27272A] border border-white/30 text-white hover:border-white/60'
+      : isNordic
+      ? 'bg-[#0284C7] border border-white/20 text-white hover:border-white/60'
+      : 'bg-[#00B4D8] border border-white/20 text-white hover:border-white/60';
+  }
+
   return (
     <Marker
       longitude={displayCoord.lng}
@@ -56,7 +88,7 @@ export function TrainMarker({ train, isSelected = false, isRecommended = false, 
       >
         {/* Recommended Train Target Indicator */}
         {isRecommended && (
-          <div className="absolute -inset-1.5 rounded-full bg-cyan-400/30 animate-ping pointer-events-none" />
+          <div className={`absolute -inset-1.5 rounded-full animate-ping pointer-events-none ${pingClass}`} />
         )}
 
         {/* Schematic Circuit Unit Marker */}
@@ -69,16 +101,10 @@ export function TrainMarker({ train, isSelected = false, isRecommended = false, 
           className="relative flex items-center justify-center"
         >
           <div
-            className={`w-8 h-3.5 rounded-full flex items-center justify-between px-1 transition-all ${
-              isRecommended
-                ? 'bg-cyan-500 ring-2 ring-white shadow-[0_0_12px_rgba(6,182,212,0.9)]'
-                : isSelected
-                ? 'bg-[#00A896] ring-1 ring-white shadow-[0_0_8px_rgba(0,168,150,0.8)]'
-                : 'bg-[#00A896] border border-white/20 hover:border-white/60'
-            }`}
+            className={`w-8 h-3.5 rounded-full flex items-center justify-between px-1 transition-all ${capsuleClass}`}
           >
             <div className="w-1 h-1 rounded-full bg-white" />
-            <span className="font-mono text-[7px] font-bold text-white tracking-tighter">
+            <span className="font-mono text-[7px] font-bold tracking-tighter">
               {trainShortId}
             </span>
             <div className="w-0.5 h-0.5 rounded-full bg-black/40" />

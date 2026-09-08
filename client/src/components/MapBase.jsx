@@ -4,6 +4,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useStationContext } from '../context/useStationContext.jsx';
 import { TrainMarker } from './TrainMarker.jsx';
 
+import { THEMES } from '../utils/themeConfig.js';
+
 // Corridor geographic bounds: [SW, NE]
 const CORRIDOR_BOUNDS = [
   [76.25, 9.90],
@@ -14,59 +16,6 @@ const DEFAULT_CENTER = {
   longitude: 76.315,
   latitude: 10.025,
   zoom: 12.5,
-};
-
-// Pure schematic circuit style with Kochi water silhouettes & dark slate canvas
-const CIRCUIT_STYLE = {
-  version: 8,
-  name: 'KMRL Schematic Circuit with Water Silhouettes',
-  sources: {
-    carto: {
-      type: 'vector',
-      url: 'https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json',
-    },
-  },
-  layers: [
-    {
-      id: 'circuit-background',
-      type: 'background',
-      paint: {
-        'background-color': '#0B0F19',
-      },
-    },
-    {
-      id: 'water-silhouette',
-      type: 'fill',
-      source: 'carto',
-      'source-layer': 'water',
-      paint: {
-        'fill-color': '#07152B',
-        'fill-opacity': 0.85,
-      },
-    },
-    {
-      id: 'water-boundary',
-      type: 'line',
-      source: 'carto',
-      'source-layer': 'water',
-      paint: {
-        'line-color': '#0E284D',
-        'line-width': 1,
-        'line-opacity': 0.5,
-      },
-    },
-    {
-      id: 'waterway-silhouette',
-      type: 'line',
-      source: 'carto',
-      'source-layer': 'waterway',
-      paint: {
-        'line-color': '#0A1E38',
-        'line-width': 1.4,
-        'line-opacity': 0.6,
-      },
-    },
-  ],
 };
 
 export function MapBase({
@@ -80,10 +29,69 @@ export function MapBase({
   onSelectStation,
   padding,
   mapRef: externalMapRef,
+  theme = THEMES.kmrl,
 }) {
   const internalMapRef = useRef(null);
   const mapRef = externalMapRef || internalMapRef;
   const { trains, stations, tracksGeoJSON, activeStation, setActiveStation } = useStationContext();
+
+  const activeTheme = theme || THEMES.kmrl;
+
+  // Dynamic schematic circuit style with Kochi water silhouettes adapting to theme
+  const circuitStyle = useMemo(() => {
+    const mapColors = activeTheme.map || THEMES.kmrl.map;
+    return {
+      version: 8,
+      name: 'KMRL Schematic Circuit',
+      sources: {
+        carto: {
+          type: 'vector',
+          url: 'https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json',
+        },
+      },
+      layers: [
+        {
+          id: 'circuit-background',
+          type: 'background',
+          paint: {
+            'background-color': mapColors.bg,
+          },
+        },
+        {
+          id: 'water-silhouette',
+          type: 'fill',
+          source: 'carto',
+          'source-layer': 'water',
+          paint: {
+            'fill-color': mapColors.waterFill,
+            'fill-opacity': 0.85,
+          },
+        },
+        {
+          id: 'water-boundary',
+          type: 'line',
+          source: 'carto',
+          'source-layer': 'water',
+          paint: {
+            'line-color': mapColors.waterLine,
+            'line-width': 1,
+            'line-opacity': 0.5,
+          },
+        },
+        {
+          id: 'waterway-silhouette',
+          type: 'line',
+          source: 'carto',
+          'source-layer': 'waterway',
+          paint: {
+            'line-color': mapColors.waterLine,
+            'line-width': 1.4,
+            'line-opacity': 0.6,
+          },
+        },
+      ],
+    };
+  }, [activeTheme]);
 
   // Schematic Track Glow (wide blurred trace)
   const trackGlowLayer = useMemo(
@@ -92,13 +100,13 @@ export function MapBase({
       type: 'line',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': '#00A896',
+        'line-color': activeTheme.map?.trackGlow || '#00B4D8',
         'line-width': 8,
         'line-opacity': 0.35,
         'line-blur': 4,
       },
     }),
-    []
+    [activeTheme]
   );
 
   // Schematic Track Core (crisp vibrant trace)
@@ -108,12 +116,12 @@ export function MapBase({
       type: 'line',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': '#00A896',
+        'line-color': activeTheme.map?.trackCore || '#90E0EF',
         'line-width': 2.2,
         'line-opacity': 1,
       },
     }),
-    []
+    [activeTheme]
   );
 
   // Active Journey Segment Slice (Origin to Destination)
@@ -188,13 +196,13 @@ export function MapBase({
       type: 'line',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': '#06B6D4',
+        'line-color': activeTheme.map?.routeHighlightGlow || '#FFB703',
         'line-width': 10,
         'line-opacity': 0.75,
         'line-blur': 4,
       },
     }),
-    []
+    [activeTheme]
   );
 
   const routeHighlightCoreLayer = useMemo(
@@ -203,16 +211,19 @@ export function MapBase({
       type: 'line',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': '#38BDF8',
+        'line-color': activeTheme.map?.routeHighlightCore || '#FFE494',
         'line-width': 3.5,
         'line-opacity': 1,
       },
     }),
-    []
+    [activeTheme]
   );
 
   return (
-    <div className="w-full min-h-[100dvh] h-full relative overflow-hidden bg-[#0B0F19]">
+    <div
+      className="w-full min-h-[100dvh] h-full relative overflow-hidden transition-colors duration-300"
+      style={{ backgroundColor: activeTheme.bgApp }}
+    >
       {/* Blueprint Precision Grid Overlay */}
       <div className="absolute inset-0 pointer-events-none blueprint-grid-overlay z-0 opacity-80" />
 
@@ -221,7 +232,7 @@ export function MapBase({
         {...(viewState || DEFAULT_CENTER)}
         padding={padding}
         onMove={(evt) => onViewStateChange && onViewStateChange(evt.viewState)}
-        mapStyle={CIRCUIT_STYLE}
+        mapStyle={circuitStyle}
         pitch={0}
         bearing={0}
         dragRotate={false}
@@ -301,6 +312,7 @@ export function MapBase({
             isSelected={selectedTrainId === train.id}
             isRecommended={recommendedTrainId === train.id}
             onSelect={onSelectTrain}
+            theme={activeTheme}
           />
         ))}
 
