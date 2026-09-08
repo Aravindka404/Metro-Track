@@ -333,8 +333,15 @@ export class GTFSEngine {
   getScheduledDepartures(originId, destId = null, timeStr = null, limit = 4) {
     if (!this.isLoaded || !originId) return [];
 
-    const normOrigin = originId.toUpperCase() === 'TRPN' ? 'TPHT' : originId.toUpperCase();
-    const normDest = destId ? (destId.toUpperCase() === 'TRPN' ? 'TPHT' : destId.toUpperCase()) : null;
+    const normalizeId = (id) => {
+      if (!id) return null;
+      const u = id.toUpperCase();
+      if (u === 'TRPN') return 'TPHT';
+      if (u === 'EDPL') return 'EDAP';
+      return u;
+    };
+    const normOrigin = normalizeId(originId);
+    const normDest = normalizeId(destId);
 
     let targetSec;
     if (timeStr && timeStr.includes(':')) {

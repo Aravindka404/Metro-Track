@@ -27,11 +27,12 @@ export const KMRL_STATION_IDS = [
   'TPHT', // 24: Tripunithura
 ];
 
-// Normalize ID variations (e.g., TRPN -> TPHT)
+// Normalize ID variations (e.g., TRPN -> TPHT, EDPL -> EDAP)
 export function normalizeStationId(id) {
   if (!id) return '';
   const upper = id.toUpperCase();
   if (upper === 'TRPN') return 'TPHT';
+  if (upper === 'EDPL') return 'EDAP';
   return upper;
 }
 
