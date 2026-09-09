@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Clock, X, Moon, Compass } from 'lucide-react';
 import { MapBase } from '../components/MapBase.jsx';
@@ -80,6 +81,8 @@ export function NetworkView() {
     userLocation,
     setUserLocation,
   } = useStationContext();
+
+  const navigate = useNavigate();
 
   const currentStation = activeStation || nearestStation;
 
@@ -485,6 +488,7 @@ export function NetworkView() {
             ? { originId: currentStation.id, destinationId: destinationStation.id }
             : null
         }
+        onSelectTrain={(t) => navigate(`/train/${t.id}`)}
         theme={currentTheme}
       />
 
@@ -650,7 +654,11 @@ export function NetworkView() {
 
           {/* FIRST TRAIN CARD - ALWAYS VISIBLE IN MINIMIZED AND EXPANDED MODES */}
           {destinationStation && firstTrain && (
-            <div className="p-3.5 rounded-2xl border border-sky-400/40 bg-sky-500/10 shadow-[0_4px_16px_rgba(14,165,233,0.12)] flex flex-col gap-1.5">
+            <div
+              onClick={() => firstTrain.id && navigate(`/train/${firstTrain.id}`)}
+              className="p-3.5 rounded-2xl border border-sky-400/40 bg-sky-500/10 shadow-[0_4px_16px_rgba(14,165,233,0.12)] flex flex-col gap-1.5 cursor-pointer hover:bg-sky-500/15 hover:border-sky-400/70 transition-all active:scale-[0.99]"
+              title={`Track Train KMRL-${firstTrain.displayId} Live`}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
@@ -745,7 +753,9 @@ export function NetworkView() {
                       return (
                         <div
                           key={train.id || idx}
-                          className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] transition-all"
+                          onClick={() => train.id && navigate(`/train/${train.id}`)}
+                          className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.07] hover:border-white/20 transition-all cursor-pointer active:scale-[0.99]"
+                          title={`Track Train KMRL-${train.displayId} Live`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -794,7 +804,9 @@ export function NetworkView() {
                             {liveStationArrivals.north.slice(0, 3).map((arr) => (
                               <div
                                 key={arr.train.id}
-                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
+                                onClick={() => arr.train?.id && navigate(`/train/${arr.train.id}`)}
+                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/20 hover:bg-white/[0.06] flex items-center justify-between text-xs cursor-pointer transition-all active:scale-[0.99]"
+                                title={`Track Train KMRL-${arr.train.id.replace('KMRL-', '')} Live`}
                               >
                                 <span className="font-bold text-white">
                                   KMRL-{arr.train.id.replace('KMRL-', '')}
@@ -829,7 +841,9 @@ export function NetworkView() {
                             {liveStationArrivals.south.slice(0, 3).map((arr) => (
                               <div
                                 key={arr.train.id}
-                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
+                                onClick={() => arr.train?.id && navigate(`/train/${arr.train.id}`)}
+                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/20 hover:bg-white/[0.06] flex items-center justify-between text-xs cursor-pointer transition-all active:scale-[0.99]"
+                                title={`Track Train KMRL-${arr.train.id.replace('KMRL-', '')} Live`}
                               >
                                 <span className="font-bold text-white">
                                   KMRL-{arr.train.id.replace('KMRL-', '')}

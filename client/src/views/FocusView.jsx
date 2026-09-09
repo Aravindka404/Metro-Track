@@ -51,11 +51,25 @@ export function FocusView() {
   }, [isMobile]);
 
   const train = useMemo(() => {
-    if (!id) return null;
-    return trains.find((t) => t.id.toLowerCase() === id.toLowerCase());
+    if (!id || !trains.length) return null;
+    const cleanId = id.toLowerCase().replace('kmrl-', '');
+    return trains.find((t) => {
+      const tClean = (t.id || '').toLowerCase().replace('kmrl-', '');
+      return tClean === cleanId || (t.id || '').toLowerCase() === id.toLowerCase();
+    });
   }, [trains, id]);
 
   const trainShortId = train ? train.id.replace('KMRL-', '') : (id ? id.replace('KMRL-', '') : '');
+
+  const isNorthbound = useMemo(() => {
+    if (!train) return false;
+    return (
+      train.directionId === 1 ||
+      train.direction === 1 ||
+      (train.id && train.id.includes('-N')) ||
+      (train.destination && train.destination.toLowerCase().includes('aluva'))
+    );
+  }, [train]);
 
   const [viewState, setViewState] = useState({
     longitude: 76.315,
@@ -68,7 +82,7 @@ export function FocusView() {
 
   // Smooth camera lock-on
   useEffect(() => {
-    if (train && isLockedOnTrain) {
+    if (train && isLockedOnTrain && typeof train.lng === 'number' && typeof train.lat === 'number') {
       setViewState((prev) => ({
         ...prev,
         longitude: train.lng,
@@ -79,7 +93,7 @@ export function FocusView() {
   }, [train?.lng, train?.lat, isLockedOnTrain]);
 
   useEffect(() => {
-    if (train) {
+    if (train && typeof train.lng === 'number' && typeof train.lat === 'number') {
       setViewState({
         longitude: train.lng,
         latitude: train.lat,
@@ -92,15 +106,17 @@ export function FocusView() {
   const progressionStations = useMemo(() => {
     if (!stations || stations.length === 0) return [];
 
-    const isNorthbound = train
-      ? train.directionId === 1 || train.direction === 1 || (train.id && train.id.includes('-N'))
-      : false;
     const ordered = isNorthbound ? [...stations].reverse() : [...stations];
 
     if (!train) return ordered.map((s) => ({ ...s, state: 'upcoming' }));
 
+    const nextStationName = (train.nextStation || '').toLowerCase();
+    const nextStationId = train.nextStationId || '';
+
     const nextIdx = ordered.findIndex(
-      (s) => s.id === train.nextStationId || s.name.toLowerCase() === train.nextStation.toLowerCase()
+      (s) =>
+        (nextStationId && s.id === nextStationId) ||
+        (nextStationName && s.name && s.name.toLowerCase() === nextStationName)
     );
 
     return ordered.map((s, idx) => {
@@ -117,7 +133,7 @@ export function FocusView() {
         isPassed: state === 'passed',
       };
     });
-  }, [stations, train]);
+  }, [stations, train, isNorthbound]);
 
   const passedCount = useMemo(
     () => progressionStations.filter((s) => s.isPassed).length,
@@ -152,6 +168,7 @@ export function FocusView() {
         }}
         padding={mapPadding}
         selectedTrainId={train?.id}
+        onSelectTrain={(t) => navigate(`/train/${t.id}`)}
       />
 
       {/* Top Header Information Bar */}
@@ -293,11 +310,11 @@ export function FocusView() {
               {/* Corridor Progress Bar */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between font-mono text-xs text-slate-300">
-                  <span>FROM {train.origin.toUpperCase()}</span>
+                  <span>FROM {(train.origin || 'Aluva').toUpperCase()}</span>
                   <span className="text-slate-500">
                     {Math.round(train.progress || 0)}% TRIP
                   </span>
-                  <span>TO {train.destination.toUpperCase()}</span>
+                  <span>TO {(train.destination || 'Thripunithura').toUpperCase()}</span>
                 </div>
                 <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
                   <div
@@ -320,7 +337,7 @@ export function FocusView() {
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="font-mono text-2xl font-bold text-white">
-                    {train.speed}
+                    {train.speed ?? 0}
                   </span>
                   <span className="font-mono text-xs text-slate-500">KM/H</span>
                 </div>
@@ -338,7 +355,7 @@ export function FocusView() {
                   <MapPin size={18} strokeWidth={1.5} className="text-slate-400" />
                 </div>
                 <div className="font-mono text-sm font-bold text-white truncate">
-                  {train.nextStation.toUpperCase()}
+                  {(train.nextStation || train.nextStationId || 'Next Stop').toUpperCase()}
                 </div>
                 <div className="flex items-center justify-between font-mono text-[10px] text-slate-400 pt-1 border-t border-white/5">
                   <span>ARRIVING IN</span>
