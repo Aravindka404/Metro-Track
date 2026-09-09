@@ -55,6 +55,7 @@ export function TrainMarker({
   // directionId === 0 or '-S' => Towards Thripunithura (Southbound)
   const isNorthbound =
     train.directionId === 1 ||
+    train.direction === 1 ||
     train.id.includes('-N') ||
     (train.destination && train.destination.toLowerCase().includes('aluva'));
 

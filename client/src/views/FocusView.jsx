@@ -92,7 +92,9 @@ export function FocusView() {
   const progressionStations = useMemo(() => {
     if (!stations || stations.length === 0) return [];
 
-    const isNorthbound = train ? train.directionId === 1 : false;
+    const isNorthbound = train
+      ? train.directionId === 1 || train.direction === 1 || (train.id && train.id.includes('-N'))
+      : false;
     const ordered = isNorthbound ? [...stations].reverse() : [...stations];
 
     if (!train) return ordered.map((s) => ({ ...s, state: 'upcoming' }));
@@ -280,7 +282,7 @@ export function FocusView() {
 
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[10px] text-slate-400 tracking-wider uppercase">
-                    {train.directionId === 0 ? 'TOWARDS SOUTH' : 'TOWARDS NORTH'}
+                    {isNorthbound ? 'TOWARDS NORTH' : 'TOWARDS SOUTH'}
                   </span>
                   <span className="font-mono text-[10px] text-[#00A896] px-2 py-0.5 rounded bg-white/5 border border-white/5 uppercase">
                     ON SCHEDULE

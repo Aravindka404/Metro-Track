@@ -251,7 +251,7 @@ export class GTFSEngine {
             isDwelling = true;
             curStop = s;
             nextStop = stList[i + 1] || s;
-            curStopIdx = i + 1;
+            curStopIdx = i;
             currentDist = s.dist;
             speedKmH = 0;
             break;
@@ -306,6 +306,7 @@ export class GTFSEngine {
             activeTrains.push({
               id: trainCode,
               tripId: trip.trip_id,
+              direction: trip.direction_id,
               directionId: trip.direction_id,
               origin: originStop ? originStop.name : 'Aluva',
               destination: destStop ? destStop.name : 'Tripunithura',

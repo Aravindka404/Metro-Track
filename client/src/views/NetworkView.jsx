@@ -51,6 +51,18 @@ function formatTime12h(timeStr) {
   return `${h}:${m} ${ampm}`;
 }
 
+// Safely extract train direction: 0 = Southbound (towards Tripunithura), 1 = Northbound (towards Aluva)
+function getTrainDirection(train) {
+  if (!train) return null;
+  if (typeof train.directionId === 'number') return train.directionId;
+  if (typeof train.direction === 'number') return train.direction;
+  if (typeof train.id === 'string') {
+    if (train.id.includes('-N')) return 1;
+    if (train.id.includes('-S')) return 0;
+  }
+  return null;
+}
+
 export function NetworkView() {
   const {
     trains,
@@ -217,11 +229,17 @@ export function NetworkView() {
         const item = {
           train,
           etaSeconds: stopEntry.etaSeconds,
-          currentLocation: train.statusText || 'In transit',
+          currentLocation:
+            train.isDwelling && stopEntry.etaSeconds <= 0
+              ? 'At platform'
+              : train.nextStation
+              ? `Near ${train.nextStation}`
+              : 'In transit',
         };
-        if (train.direction === 1) {
+        const dir = getTrainDirection(train);
+        if (dir === 1) {
           arrivalsNorth.push(item);
-        } else {
+        } else if (dir === 0) {
           arrivalsSouth.push(item);
         }
       }
@@ -242,19 +260,31 @@ export function NetworkView() {
     const rideMinutes = estimateRideDurationMinutes(currentStation.id, destinationStation.id);
     const direction = getTripDirection(currentStation.id, destinationStation.id);
 
+    if (direction === null) {
+      return {
+        isCustomTime: false,
+        fare: 0,
+        hops: 0,
+        rideMinutes: 0,
+        journeyTrains: [],
+      };
+    }
+
     if (selectedTime) {
-      const scheduledList = (scheduledDepartures || []).map((dep) => ({
-        id: dep.trainId,
-        displayId: dep.trainId.replace('KMRL-', ''),
-        isLive: false,
-        direction: dep.directionId,
-        depTime: dep.depTime,
-        arrTime: dep.arrTime,
-        departureDisplay: dep.depTime,
-        status: `Scheduled (${dep.depTime})`,
-        waitEtaSeconds: dep.etaSeconds,
-        rideMinutes: dep.rideMinutes || rideMinutes,
-      }));
+      const scheduledList = (scheduledDepartures || [])
+        .filter((dep) => dep.directionId === undefined || dep.directionId === direction)
+        .map((dep) => ({
+          id: dep.trainId,
+          displayId: dep.trainId.replace('KMRL-', ''),
+          isLive: false,
+          direction: dep.directionId !== undefined ? dep.directionId : direction,
+          depTime: dep.depTime,
+          arrTime: dep.arrTime,
+          departureDisplay: dep.depTime,
+          status: `Scheduled (${dep.depTime})`,
+          waitEtaSeconds: dep.etaSeconds,
+          rideMinutes: dep.rideMinutes || rideMinutes,
+        }));
 
       return {
         isCustomTime: true,
@@ -267,21 +297,46 @@ export function NetworkView() {
     }
 
     // Default: Live Mode
+    const normOriginId = normalizeStationId(currentStation.id);
     const normDestId = normalizeStationId(destinationStation.id);
-    const relevantLiveArrivals = (direction === 1 ? liveStationArrivals.north : liveStationArrivals.south).filter(
-      (arr) => {
-        if (!arr.train.remainingStops || arr.train.remainingStops.length === 0) return true;
-        return arr.train.remainingStops.some(
-          (s) => normalizeStationId(s.stopId) === normDestId
-        );
+
+    const candidateLiveTrains = [];
+
+    trains.forEach((train) => {
+      // 1. Strict Direction Match: Only trains heading in the trip's direction are eligible
+      const trainDir = getTrainDirection(train);
+      if (trainDir !== direction) {
+        return;
       }
-    );
 
-    const journeyTrains = [];
+      const remStops = train.remainingStops || [];
+      if (!remStops.length) return;
 
-    // 1. Add active live trains
-    for (const arr of relevantLiveArrivals.slice(0, 4)) {
-      const waitSec = arr.etaSeconds;
+      // 2. Sequence Check: Origin must be in upcoming stops, and Destination must be AFTER Origin
+      const originIdx = remStops.findIndex(
+        (s) => normalizeStationId(s.stopId) === normOriginId
+      );
+      const destIdx = remStops.findIndex(
+        (s) => normalizeStationId(s.stopId) === normDestId
+      );
+
+      // If the train has already departed origin, or does not reach destination after origin, skip
+      if (originIdx === -1 || destIdx === -1 || destIdx <= originIdx) {
+        return;
+      }
+
+      const originStop = remStops[originIdx];
+      const destStop = remStops[destIdx];
+      const waitSec = originStop.etaSeconds;
+
+      // Ignore trains whose departure from origin was in the past
+      if (waitSec < 0) return;
+
+      const rideMins =
+        destStop.etaSeconds !== undefined && originStop.etaSeconds !== undefined
+          ? Math.max(1, Math.round((destStop.etaSeconds - originStop.etaSeconds) / 60))
+          : rideMinutes;
+
       const depDisplay =
         waitSec <= 0
           ? 'Arriving now'
@@ -297,7 +352,7 @@ export function NetworkView() {
         hour12: true,
       });
 
-      const arrDate = new Date(Date.now() + (Math.max(0, waitSec) + rideMinutes * 60) * 1000);
+      const arrDate = new Date(Date.now() + (Math.max(0, waitSec) + rideMins * 60) * 1000);
       const arrTime = arrDate.toLocaleTimeString('en-US', {
         timeZone: 'Asia/Kolkata',
         hour: 'numeric',
@@ -305,30 +360,46 @@ export function NetworkView() {
         hour12: true,
       });
 
-      journeyTrains.push({
-        id: arr.train.id,
-        displayId: arr.train.id.replace('KMRL-', ''),
+      const currentLocation =
+        train.isDwelling && originIdx === 0
+          ? 'At platform'
+          : train.nextStation
+          ? `Near ${train.nextStation}`
+          : 'In transit';
+
+      candidateLiveTrains.push({
+        id: train.id,
+        displayId: train.id.replace('KMRL-', ''),
         isLive: true,
-        direction: arr.train.direction,
+        direction: trainDir,
         depTime,
         arrTime,
         departureDisplay: depDisplay,
-        status: arr.currentLocation,
+        status: currentLocation,
         waitEtaSeconds: waitSec,
-        rideMinutes,
+        rideMinutes: rideMins,
       });
-    }
+    });
+
+    // Sort live trains by arrival at origin ascending
+    candidateLiveTrains.sort((a, b) => a.waitEtaSeconds - b.waitEtaSeconds);
+
+    const journeyTrains = [...candidateLiveTrains.slice(0, 4)];
 
     // 2. Backfill with scheduled departures if fewer than 4 live trains
     if (journeyTrains.length < 4 && scheduledDepartures && scheduledDepartures.length > 0) {
       for (const dep of scheduledDepartures) {
         if (journeyTrains.length >= 4) break;
+        // Ensure scheduled departure strictly matches direction
+        if (dep.directionId !== undefined && dep.directionId !== direction) {
+          continue;
+        }
         if (!journeyTrains.some((t) => t.id === dep.trainId)) {
           journeyTrains.push({
             id: dep.trainId,
             displayId: dep.trainId.replace('KMRL-', ''),
             isLive: false,
-            direction: dep.directionId,
+            direction: dep.directionId !== undefined ? dep.directionId : direction,
             depTime: dep.depTime,
             arrTime: dep.arrTime,
             departureDisplay: dep.depTime,
@@ -347,7 +418,7 @@ export function NetworkView() {
       rideMinutes,
       journeyTrains,
     };
-  }, [currentStation, destinationStation, selectedTime, scheduledDepartures, liveStationArrivals]);
+  }, [currentStation, destinationStation, selectedTime, scheduledDepartures, trains]);
 
   const handleSelectStation = useCallback(
     (st) => {
