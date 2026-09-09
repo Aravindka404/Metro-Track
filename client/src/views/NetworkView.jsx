@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, Clock, X, Sparkles, Moon, Navigation, Compass } from 'lucide-react';
+import { ChevronUp, ChevronDown, Clock, X, Moon, Compass } from 'lucide-react';
 import { MapBase } from '../components/MapBase.jsx';
 import { StationPills } from '../components/StationPills.jsx';
 import { StationPickerModal } from '../components/StationPickerModal.jsx';
@@ -73,13 +73,14 @@ export function NetworkView() {
 
   // Destination & Drawer state
   const [destinationStation, setDestinationStation] = useState(null);
-  const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
+  // Default is minimized / peek mode so user sees the map + first train immediately!
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(false);
   const [selectedTrainIdx, setSelectedTrainIdx] = useState(0);
 
   // Station picker modal state ('origin' | 'destination' | null)
   const [stationPickerMode, setStationPickerMode] = useState(null);
 
-  // Depart later time planning state (null = silent live default)
+  // Depart later time planning state (null = live default)
   const [selectedTime, setSelectedTime] = useState(null);
   const [customTimeInput, setCustomTimeInput] = useState('17:30');
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
@@ -104,10 +105,11 @@ export function NetworkView() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Map padding so corridor remains nicely framed above the drawer
   const mapPadding = useMemo(() => {
     if (isMobile) {
       return {
-        bottom: isDrawerExpanded ? Math.round(window.innerHeight * 0.5) : 170,
+        bottom: isDrawerExpanded ? Math.round(window.innerHeight * 0.52) : 250,
         top: 80,
         left: 20,
         right: 20,
@@ -142,7 +144,6 @@ export function NetworkView() {
           }
         },
         () => {
-          // Geolocation declined; fallback to first station (Aluva)
           if (stations.length > 0 && !activeStation) {
             setActiveStation(stations[0]);
           }
@@ -152,7 +153,7 @@ export function NetworkView() {
     }
   }, [stations, activeStation, setActiveStation, setNearestStation, setUserLocation]);
 
-  // Fallback initial station if none set
+  // Fallback initial station
   useEffect(() => {
     if (stations.length > 0 && !activeStation && !nearestStation) {
       setActiveStation(stations[0]);
@@ -246,6 +247,7 @@ export function NetworkView() {
         id: dep.trainId,
         displayId: dep.trainId.replace('KMRL-', ''),
         isLive: false,
+        direction: dep.directionId,
         depTime: dep.depTime,
         arrTime: dep.arrTime,
         departureDisplay: dep.depTime,
@@ -392,7 +394,8 @@ export function NetworkView() {
     });
   };
 
-  const activeTrain = tripPlan?.journeyTrains?.[selectedTrainIdx] || tripPlan?.journeyTrains?.[0];
+  const firstTrain = tripPlan?.journeyTrains?.[0];
+  const subsequentTrains = tripPlan?.journeyTrains?.slice(1) || [];
 
   return (
     <div
@@ -405,7 +408,7 @@ export function NetworkView() {
         onViewStateChange={setViewState}
         onSelectStation={handleSelectStation}
         padding={mapPadding}
-        recommendedTrainId={activeTrain?.id || null}
+        recommendedTrainId={firstTrain?.id || null}
         routeHighlight={
           destinationStation && currentStation
             ? { originId: currentStation.id, destinationId: destinationStation.id }
@@ -479,20 +482,22 @@ export function NetworkView() {
           y: isMobile
             ? isDrawerExpanded
               ? 0
-              : 'calc(100% - 156px)'
+              : 'calc(100% - 240px)'
             : 0,
         }}
         transition={{ type: 'spring', damping: 26, stiffness: 220 }}
         className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[440px] z-30 pointer-events-auto overscroll-y-contain"
       >
         <div
-          className={`p-4 sm:p-5 rounded-t-[28px] sm:rounded-3xl border ${currentTheme.drawerBorder} ${currentTheme.drawerBg} backdrop-blur-2xl flex flex-col gap-3 max-h-[82vh] sm:max-h-[80vh] overflow-hidden shadow-[0_16px_50px_rgba(0,0,0,0.7)] transition-all duration-300`}
+          className={`p-4 sm:p-5 rounded-t-[28px] sm:rounded-3xl border ${currentTheme.drawerBorder} ${currentTheme.drawerBg} backdrop-blur-2xl flex flex-col gap-2.5 max-h-[84vh] sm:max-h-[82vh] overflow-hidden shadow-[0_16px_50px_rgba(0,0,0,0.7)] transition-all duration-300`}
         >
-          {/* Mobile Swipe Grab Handle */}
+          {/* Mobile Swipe Grab Handle & Tap-to-Toggle Header */}
           <div
             onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
-            className="w-12 h-1.5 rounded-full bg-white/25 hover:bg-white/40 mx-auto cursor-grab active:cursor-grabbing sm:hidden -mt-1 mb-1"
-          />
+            className="flex items-center justify-center cursor-pointer py-1 -mt-1 group"
+          >
+            <div className="w-12 h-1.5 rounded-full bg-white/25 group-hover:bg-white/40 transition-colors" />
+          </div>
 
           {/* Interactive Station Pills Selector */}
           <StationPills
@@ -504,8 +509,8 @@ export function NetworkView() {
             theme={currentTheme}
           />
 
-          {/* Quick Route Stats Strip & Time Planning Row */}
-          <div className="flex items-center justify-between px-1 border-b border-white/10 pb-2.5">
+          {/* Key Details Strip (Fare + Stops + Depart later?) */}
+          <div className="flex items-center justify-between px-1 py-1 border-b border-white/10">
             {destinationStation && tripPlan ? (
               <div className="flex items-baseline gap-2">
                 <span className="font-mono text-xl sm:text-2xl font-extrabold text-rose-500">
@@ -517,20 +522,20 @@ export function NetworkView() {
               </div>
             ) : (
               <span className="font-sans text-xs text-slate-400 font-medium">
-                Choose destination to plan fare & route
+                Select destination to view first train & fare
               </span>
             )}
 
-            {/* Depart Later Quick Action */}
+            {/* Depart later? Action */}
             {!selectedTime ? (
               !isTimePickerOpen ? (
                 <button
                   type="button"
                   onClick={() => setIsTimePickerOpen(true)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-sky-400 hover:text-sky-300 transition-colors py-1 px-2 rounded-lg bg-sky-500/10 border border-sky-500/20 active:scale-95"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-sky-400 hover:text-sky-300 transition-colors py-1 px-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 active:scale-95"
                 >
                   <Clock size={12} strokeWidth={2.2} />
-                  <span>Depart later</span>
+                  <span>Depart later?</span>
                 </button>
               ) : (
                 <div className="flex items-center gap-1.5 bg-[#0B0F19] p-1.5 rounded-xl border border-white/15">
@@ -572,207 +577,214 @@ export function NetworkView() {
             )}
           </div>
 
-          {/* Drawer Body Scroll Area */}
-          <div className="overflow-y-auto flex flex-col gap-3 pr-1 pb-1 overscroll-contain">
-            {/* Off-Hours Service Closed Alert */}
-            {!isOpen && (
-              <div className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs">
-                <Moon size={15} className="text-amber-400 shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-sans font-bold text-amber-300">Service Closed for the Night</span>
-                  <span className="text-slate-300 text-[11px] leading-relaxed">
-                    Kochi Metro trains have concluded operations for today. Tomorrow's morning services commence at{' '}
-                    <strong className="text-white font-semibold">{opensAt || '06:00 AM'} IST</strong>.
+          {/* FIRST TRAIN CARD - ALWAYS VISIBLE IN MINIMIZED AND EXPANDED MODES */}
+          {destinationStation && firstTrain && (
+            <div className="p-3.5 rounded-2xl border border-sky-400/40 bg-sky-500/10 shadow-[0_4px_16px_rgba(14,165,233,0.12)] flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      firstTrain.direction === 1
+                        ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                        : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
+                    }`}
+                  />
+                  <span className="font-sans text-sm font-extrabold text-white tracking-tight">
+                    KMRL-{firstTrain.displayId}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                    FIRST TRAIN
                   </span>
                 </div>
-              </div>
-            )}
 
-            {/* Upcoming Departures Header */}
-            {destinationStation && tripPlan && (
-              <div className="flex items-center justify-between px-1 pt-1">
-                <span className="font-sans text-[11px] text-slate-400 uppercase tracking-wider font-extrabold">
-                  {tripPlan.isCustomTime ? 'SCHEDULED DEPARTURES' : isOpen ? 'UPCOMING DEPARTURES' : 'MORNING DEPARTURES'}
-                </span>
-                <span className="font-sans text-[11px] text-slate-400 font-medium">
-                  {tripPlan.journeyTrains?.length || 0} options available
+                <span className="font-mono text-sm sm:text-base font-extrabold text-sky-400 tabular-nums">
+                  {firstTrain.departureDisplay || firstTrain.depTime}
                 </span>
               </div>
-            )}
 
-            {/* ========================================================================= */}
-            {/* STATE A: Destination Selected (Upcoming Clean Train Cards)                */}
-            {/* ========================================================================= */}
-            {destinationStation && tripPlan && tripPlan.journeyTrains && tripPlan.journeyTrains.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {tripPlan.journeyTrains.map((train, idx) => {
-                  const isSelected = selectedTrainIdx === idx;
-                  const isNorth = train.direction === 1;
-                  const dotColor = isNorth ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]';
+              {/* Single clean subtitle row with zero redundancy */}
+              <div className="flex items-center justify-between text-xs text-slate-300 font-sans pt-1 border-t border-white/10">
+                <span>Ride: <strong className="text-white">{firstTrain.rideMinutes} mins</strong></span>
+                <span>Arrival: <strong className="text-white font-mono">{firstTrain.arrTime || '--:--'}</strong></span>
+                <span className="text-slate-400 text-[11px] truncate max-w-[120px]">{firstTrain.status}</span>
+              </div>
+            </div>
+          )}
 
-                  return (
-                    <motion.div
-                      key={train.id || idx}
-                      layout
-                      onClick={() => setSelectedTrainIdx(isSelected ? -1 : idx)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-sky-500/10 border-sky-400/40 shadow-[0_4px_20px_rgba(14,165,233,0.15)]'
-                          : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/10'
-                      }`}
+          {/* Toggle Button in Minimized Mode to reveal upcoming trains */}
+          {destinationStation && !isDrawerExpanded && subsequentTrains.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsDrawerExpanded(true)}
+              className="w-full py-1.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 flex items-center justify-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-all active:scale-98"
+            >
+              <span>View {subsequentTrains.length} more upcoming metros</span>
+              <ChevronUp size={14} />
+            </button>
+          )}
+
+          {/* Drawer Expandable Body (Visible when maximized / expanded) */}
+          <AnimatePresence>
+            {isDrawerExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-y-auto flex flex-col gap-2.5 pr-1 pb-1 overscroll-contain"
+              >
+                {/* Off-Hours Service Closed Alert */}
+                {!isOpen && (
+                  <div className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs">
+                    <Moon size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-sans font-bold text-amber-300">Service Closed for the Night</span>
+                      <span className="text-slate-300 text-[11px] leading-relaxed">
+                        Kochi Metro trains have concluded operations for today. Tomorrow's morning services resume at{' '}
+                        <strong className="text-white font-semibold">{opensAt || '06:00 AM'} IST</strong>.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subsequent Trains Header */}
+                {destinationStation && subsequentTrains.length > 0 && (
+                  <div className="flex items-center justify-between px-1 pt-1">
+                    <span className="font-sans text-[11px] text-slate-400 uppercase tracking-wider font-extrabold">
+                      LATER DEPARTURES
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsDrawerExpanded(false)}
+                      className="text-slate-400 hover:text-white text-xs flex items-center gap-1"
                     >
-                      {/* Top Row: Train ID + Departure Countdown/Time */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                          <span className="font-sans text-sm font-extrabold text-white tracking-tight">
-                            KMRL-{train.displayId}
-                          </span>
-                          {idx === 0 && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
-                              Next
+                      <span>Minimize</span>
+                      <ChevronDown size={13} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Subsequent Trains Cards */}
+                {destinationStation && subsequentTrains.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {subsequentTrains.map((train, idx) => {
+                      const isNorth = train.direction === 1;
+                      const dotColor = isNorth ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]';
+
+                      return (
+                        <div
+                          key={train.id || idx}
+                          className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                              <span className="font-sans text-sm font-extrabold text-white tracking-tight">
+                                KMRL-{train.displayId}
+                              </span>
+                            </div>
+
+                            <span className="font-mono text-sm font-bold text-sky-400 tabular-nums">
+                              {train.departureDisplay || train.depTime}
                             </span>
-                          )}
-                        </div>
+                          </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm font-bold text-sky-400 tabular-nums">
-                            {train.departureDisplay || train.depTime}
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-[11px] text-slate-400 font-sans">
+                            <span>Ride: <strong className="text-slate-200">{train.rideMinutes} mins</strong></span>
+                            <span>Arrival: <strong className="text-white font-mono">{train.arrTime || '--:--'}</strong></span>
+                            <span className="text-slate-400 truncate max-w-[120px]">{train.status}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : destinationStation && !firstTrain ? (
+                  <div className="p-6 rounded-2xl border border-white/10 bg-[#0B0F19]/80 text-center font-sans text-xs font-medium text-slate-400">
+                    {isLoadingSchedule ? 'Checking metro schedules...' : 'No upcoming trains found for this route.'}
+                  </div>
+                ) : null}
+
+                {/* Platform Departures When No Destination is Chosen */}
+                {!destinationStation && (
+                  <div className="flex flex-col gap-2.5">
+                    {currentStation && normalizeStationId(currentStation.id) !== 'ALVA' && (
+                      <div className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                          <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
+                            Towards Aluva
                           </span>
-                          <ChevronDown
-                            size={14}
-                            className={`text-slate-400 transition-transform duration-200 ${
-                              isSelected ? 'rotate-180 text-white' : ''
-                            }`}
-                          />
+                          <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
+                            Platform 1
+                          </span>
                         </div>
-                      </div>
 
-                      {/* Second Row: Ride Duration + Arrival Estimate */}
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-[11px] text-slate-400 font-sans">
-                        <span>Ride: <strong className="text-slate-200">{train.rideMinutes || tripPlan.rideMinutes} mins</strong></span>
-                        <span>Arrival: <strong className="text-white font-mono">{train.arrTime || '--:--'}</strong></span>
-                      </div>
-
-                      {/* Expandable Journey Timeline & Telemetry */}
-                      <AnimatePresence>
-                        {isSelected && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden mt-3 pt-3 border-t border-white/10 flex flex-col gap-2"
-                          >
-                            <div className="text-xs font-sans text-slate-300 flex items-center justify-between">
-                              <span>Status: <strong className="text-white">{train.status}</strong></span>
-                              <span className="font-mono text-[11px] text-slate-400">
-                                {train.waitEtaSeconds ? `ETA in ~${Math.ceil(train.waitEtaSeconds / 60)} mins` : ''}
-                              </span>
-                            </div>
-
-                            <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between text-[11px] font-sans">
-                              <span className="text-slate-300">
-                                <strong>{currentStation.name}</strong> ➔ <strong>{destinationStation.name}</strong>
-                              </span>
-                              <span className="text-rose-400 font-mono font-bold">₹{tripPlan.fare}</span>
-                            </div>
-                          </motion.div>
+                        {liveStationArrivals.north.length > 0 ? (
+                          <div className="flex flex-col gap-1.5">
+                            {liveStationArrivals.north.slice(0, 3).map((arr) => (
+                              <div
+                                key={arr.train.id}
+                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
+                              >
+                                <span className="font-bold text-white">
+                                  KMRL-{arr.train.id.replace('KMRL-', '')}
+                                </span>
+                                <span className="font-mono text-emerald-400 font-bold">
+                                  {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-500 py-1 text-center">
+                            {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                          </span>
                         )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            ) : destinationStation ? (
-              <div className="p-6 rounded-2xl border border-white/10 bg-[#0B0F19]/80 text-center font-sans text-xs font-medium text-slate-400">
-                {isLoadingSchedule ? 'Checking metro schedules...' : 'No upcoming trains found for this route.'}
-              </div>
-            ) : null}
-
-            {/* ========================================================================= */}
-            {/* STATE B: Only Boarding Station Selected (General Platform Departures)      */}
-            {/* ========================================================================= */}
-            {!destinationStation && (
-              <div className="flex flex-col gap-2.5">
-                {/* Platform 1 Towards Aluva */}
-                {currentStation && normalizeStationId(currentStation.id) !== 'ALVA' && (
-                  <div className="p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                      <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
-                        Towards Aluva
-                      </span>
-                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
-                        Platform 1
-                      </span>
-                    </div>
-
-                    {liveStationArrivals.north.length > 0 ? (
-                      <div className="flex flex-col gap-1.5">
-                        {liveStationArrivals.north.slice(0, 3).map((arr) => (
-                          <div
-                            key={arr.train.id}
-                            className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
-                          >
-                            <span className="font-bold text-white">
-                              KMRL-{arr.train.id.replace('KMRL-', '')}
-                            </span>
-                            <span className="font-mono text-emerald-400 font-bold">
-                              {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
-                            </span>
-                          </div>
-                        ))}
                       </div>
-                    ) : (
-                      <span className="text-[11px] text-slate-500 py-1 text-center">
-                        {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
-                      </span>
+                    )}
+
+                    {currentStation && normalizeStationId(currentStation.id) !== 'TPHT' && (
+                      <div className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                          <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
+                            Towards Thripunithura
+                          </span>
+                          <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
+                            Platform 2
+                          </span>
+                        </div>
+
+                        {liveStationArrivals.south.length > 0 ? (
+                          <div className="flex flex-col gap-1.5">
+                            {liveStationArrivals.south.slice(0, 3).map((arr) => (
+                              <div
+                                key={arr.train.id}
+                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
+                              >
+                                <span className="font-bold text-white">
+                                  KMRL-{arr.train.id.replace('KMRL-', '')}
+                                </span>
+                                <span className="font-mono text-amber-400 font-bold">
+                                  {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-500 py-1 text-center">
+                            {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
-
-                {/* Platform 2 Towards Thripunithura */}
-                {currentStation && normalizeStationId(currentStation.id) !== 'TPHT' && (
-                  <div className="p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                      <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
-                        Towards Thripunithura
-                      </span>
-                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
-                        Platform 2
-                      </span>
-                    </div>
-
-                    {liveStationArrivals.south.length > 0 ? (
-                      <div className="flex flex-col gap-1.5">
-                        {liveStationArrivals.south.slice(0, 3).map((arr) => (
-                          <div
-                            key={arr.train.id}
-                            className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
-                          >
-                            <span className="font-bold text-white">
-                              KMRL-{arr.train.id.replace('KMRL-', '')}
-                            </span>
-                            <span className="font-mono text-amber-400 font-bold">
-                              {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-[11px] text-slate-500 py-1 text-center">
-                        {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
         </div>
       </motion.div>
 
-      {/* Interactive Station Picker Search Modal */}
+      {/* Interactive Station Picker Modal (No Search Input) */}
       <StationPickerModal
         isOpen={stationPickerMode !== null}
         onClose={() => setStationPickerMode(null)}
@@ -787,7 +799,6 @@ export function NetworkView() {
             handleSelectStation(st);
           }
         }}
-        theme={currentTheme}
       />
     </div>
   );
