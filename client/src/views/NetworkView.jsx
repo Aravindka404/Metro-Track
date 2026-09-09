@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, Clock, X, Moon, Compass } from 'lucide-react';
+import { ChevronUp, ChevronDown, Clock, X, Moon, Sun, Compass } from 'lucide-react';
 import { MapBase } from '../components/MapBase.jsx';
 import { StationPills } from '../components/StationPills.jsx';
 import { StationPickerModal } from '../components/StationPickerModal.jsx';
@@ -13,7 +13,7 @@ import {
   getStationHopCount,
   normalizeStationId,
 } from '../utils/fareCalculator.js';
-import { THEMES } from '../utils/themeConfig.js';
+import { THEMES, getStoredTheme, saveTheme } from '../utils/themeConfig.js';
 
 // Precision Haversine algorithm for nearest station detection
 function getNearestStation(userLat, userLon, stations) {
@@ -107,7 +107,15 @@ export function NetworkView() {
     setSelectedTrainIdx(0);
   }, [currentStation?.id, destinationStation?.id, selectedTime]);
 
-  const currentTheme = THEMES.nordic;
+  const [themeKey, setThemeKey] = useState(getStoredTheme);
+  const currentTheme = THEMES[themeKey] || THEMES.dark;
+  const isLight = currentTheme.isLight;
+
+  const toggleTheme = () => {
+    const nextTheme = themeKey === 'light' ? 'dark' : 'light';
+    setThemeKey(nextTheme);
+    saveTheme(nextTheme);
+  };
 
   // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(
@@ -494,37 +502,75 @@ export function NetworkView() {
 
       {/* Floating Frosted Header HUD */}
       <header className="absolute top-3 left-3 right-3 sm:top-5 sm:left-6 sm:right-6 z-20 flex items-center justify-between pointer-events-none gap-2">
-        <div className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl border border-white/15 bg-[#0E1626]/90 backdrop-blur-xl flex items-center gap-2.5 sm:gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-          <span className="font-sans text-xs font-extrabold tracking-wider text-white uppercase">
+        <div
+          className={`pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl border backdrop-blur-xl flex items-center gap-2.5 sm:gap-3 transition-colors ${
+            isLight
+              ? 'border-slate-200 bg-white/95 text-slate-900 shadow-md'
+              : 'border-white/15 bg-[#0E1626]/90 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
+          }`}
+        >
+          <span
+            className={`font-sans text-xs font-extrabold tracking-wider uppercase ${
+              isLight ? 'text-slate-900' : 'text-white'
+            }`}
+          >
             KOCHI METRO RADAR
           </span>
-          <div className="h-3 w-[1px] bg-white/20" />
+          <div className={`h-3 w-[1px] ${isLight ? 'bg-slate-300' : 'bg-white/20'}`} />
           {isOpen ? (
-            <span className="font-sans text-xs text-slate-300 font-medium">
-              <strong className="font-mono font-bold text-white">{activeTrainsCount}</strong> active
+            <span
+              className={`font-sans text-xs font-medium ${
+                isLight ? 'text-slate-600' : 'text-slate-300'
+              }`}
+            >
+              <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                {activeTrainsCount}
+              </strong>{' '}
+              active
             </span>
           ) : (
-            <span className="font-sans text-xs text-amber-300 font-semibold flex items-center gap-1.5">
+            <span className="font-sans text-xs text-amber-500 font-semibold flex items-center gap-1.5">
               Service Closed
             </span>
           )}
-          <div className="h-3 w-[1px] bg-white/20 hidden sm:block" />
-          <span className="font-mono text-xs text-slate-400 hidden sm:inline tabular-nums">
-            {istTime || '--:--:--'} <span className="font-sans text-[10px] font-bold text-slate-500">IST</span>
+          <div className={`h-3 w-[1px] ${isLight ? 'bg-slate-300' : 'bg-white/20'} hidden sm:block`} />
+          <span
+            className={`font-mono text-xs hidden sm:inline tabular-nums ${
+              isLight ? 'text-slate-500' : 'text-slate-400'
+            }`}
+          >
+            {istTime || '--:--:--'}{' '}
+            <span className={`font-sans text-[10px] font-bold ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
+              IST
+            </span>
           </span>
         </div>
 
-        {/* Live Network Status Badge + Recenter Action */}
+        {/* Live Network Status Badge + Recenter Action + Theme Toggle */}
         <div className="flex items-center gap-2 pointer-events-auto">
           {isOpen ? (
-            <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border border-white/15 bg-[#0E1626]/90 backdrop-blur-xl flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-              <span className="font-sans text-xs font-extrabold text-white tracking-wider">LIVE</span>
+            <div
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border backdrop-blur-xl flex items-center gap-2 shadow-md transition-colors ${
+                isLight
+                  ? 'border-slate-200 bg-white/95 text-slate-900'
+                  : 'border-white/15 bg-[#0E1626]/90 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
+              <span className={`font-sans text-xs font-extrabold tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                LIVE
+              </span>
             </div>
           ) : (
-            <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border border-amber-500/30 bg-[#17141F]/90 backdrop-blur-xl flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+            <div
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border backdrop-blur-xl flex items-center gap-2 shadow-md transition-colors ${
+                isLight
+                  ? 'border-amber-200 bg-amber-50/95 text-amber-800'
+                  : 'border-amber-500/30 bg-[#17141F]/90 text-amber-300 shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
+              }`}
+            >
               <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
-              <span className="font-sans text-[11px] sm:text-xs font-bold text-amber-300 tracking-wide uppercase">
+              <span className="font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase">
                 Opens {opensAt || '06:00 AM'}
               </span>
             </div>
@@ -533,10 +579,27 @@ export function NetworkView() {
           {/* Recenter Map Button */}
           <button
             onClick={handleRecenterCorridor}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-white/15 bg-[#0E1626]/90 hover:bg-[#152238] backdrop-blur-xl flex items-center justify-center text-slate-300 hover:text-white shadow-lg active:scale-95 transition-all"
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border backdrop-blur-xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${
+              isLight
+                ? 'border-slate-200 bg-white/95 hover:bg-slate-100 text-slate-700 hover:text-slate-900 shadow-md'
+                : 'border-white/15 bg-[#0E1626]/90 hover:bg-[#152238] text-slate-300 hover:text-white'
+            }`}
             title="Recenter Metro Corridor"
           >
             <Compass size={18} strokeWidth={2.2} />
+          </button>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border backdrop-blur-xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${
+              isLight
+                ? 'border-slate-200 bg-white/95 hover:bg-slate-100 text-amber-500 hover:text-amber-600 shadow-md'
+                : 'border-white/15 bg-[#0E1626]/90 hover:bg-[#152238] text-sky-400 hover:text-sky-300'
+            }`}
+            title={`Switch to ${isLight ? 'Dark' : 'Light'} Mode`}
+          >
+            {isLight ? <Moon size={18} strokeWidth={2.2} /> : <Sun size={18} strokeWidth={2.2} />}
           </button>
         </div>
       </header>
@@ -564,14 +627,20 @@ export function NetworkView() {
         className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[440px] z-30 pointer-events-auto overscroll-y-contain"
       >
         <div
-          className={`p-4 sm:p-5 rounded-t-[28px] sm:rounded-3xl border ${currentTheme.drawerBorder} ${currentTheme.drawerBg} backdrop-blur-2xl flex flex-col gap-2.5 max-h-[84vh] sm:max-h-[82vh] overflow-hidden shadow-[0_16px_50px_rgba(0,0,0,0.7)] transition-all duration-300`}
+          className={`p-4 sm:p-5 rounded-t-[28px] sm:rounded-3xl border ${currentTheme.drawerBorder} ${currentTheme.drawerBg} backdrop-blur-2xl flex flex-col gap-2.5 max-h-[84vh] sm:max-h-[82vh] overflow-hidden ${
+            isLight ? 'shadow-[0_16px_50px_rgba(0,0,0,0.12)]' : 'shadow-[0_16px_50px_rgba(0,0,0,0.7)]'
+          } transition-all duration-300`}
         >
           {/* Mobile Swipe Grab Handle & Tap-to-Toggle Header */}
           <div
             onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
             className="flex items-center justify-center cursor-pointer py-1 -mt-1 group"
           >
-            <div className="w-12 h-1.5 rounded-full bg-white/25 group-hover:bg-white/40 transition-colors" />
+            <div
+              className={`w-12 h-1.5 rounded-full transition-colors ${
+                isLight ? 'bg-slate-300 group-hover:bg-slate-400' : 'bg-white/25 group-hover:bg-white/40'
+              }`}
+            />
           </div>
 
           {/* Interactive Station Pills Selector */}
@@ -585,18 +654,34 @@ export function NetworkView() {
           />
 
           {/* Key Details Strip (Fare + Stops + Depart later?) */}
-          <div className="flex items-center justify-between px-1 py-1 border-b border-white/10">
+          <div
+            className={`flex items-center justify-between px-1 py-1 border-b ${
+              isLight ? 'border-slate-200' : 'border-white/10'
+            }`}
+          >
             {destinationStation && tripPlan ? (
               <div className="flex items-baseline gap-2">
-                <span className="font-mono text-xl sm:text-2xl font-extrabold text-rose-500">
+                <span
+                  className={`font-mono text-xl sm:text-2xl font-extrabold ${
+                    isLight ? 'text-rose-600' : 'text-rose-500'
+                  }`}
+                >
                   ₹{tripPlan.fare}
                 </span>
-                <span className="font-sans text-xs text-slate-300 font-medium">
+                <span
+                  className={`font-sans text-xs font-medium ${
+                    isLight ? 'text-slate-600' : 'text-slate-300'
+                  }`}
+                >
                   {tripPlan.hops} stops • ~{tripPlan.rideMinutes} mins
                 </span>
               </div>
             ) : (
-              <span className="font-sans text-xs text-slate-400 font-medium">
+              <span
+                className={`font-sans text-xs font-medium ${
+                  isLight ? 'text-slate-500' : 'text-slate-400'
+                }`}
+              >
                 Select destination to view first train & fare
               </span>
             )}
@@ -607,43 +692,63 @@ export function NetworkView() {
                 <button
                   type="button"
                   onClick={() => setIsTimePickerOpen(true)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-sky-400 hover:text-sky-300 transition-colors py-1 px-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 active:scale-95"
+                  className={`flex items-center gap-1.5 text-xs font-semibold transition-colors py-1 px-2.5 rounded-lg border active:scale-95 ${
+                    isLight
+                      ? 'text-teal-700 bg-teal-50 border-teal-200 hover:bg-teal-100'
+                      : 'text-sky-400 bg-sky-500/10 border-sky-500/20 hover:text-sky-300'
+                  }`}
                 >
                   <Clock size={12} strokeWidth={2.2} />
                   <span>Depart later?</span>
                 </button>
               ) : (
-                <div className="flex items-center gap-1.5 bg-[#0B0F19] p-1.5 rounded-xl border border-white/15">
+                <div
+                  className={`flex items-center gap-1.5 p-1.5 rounded-xl border ${
+                    isLight ? 'bg-white border-slate-200 shadow-lg' : 'bg-[#0B0F19] border-white/15'
+                  }`}
+                >
                   <input
                     type="time"
                     value={customTimeInput}
                     onChange={(e) => setCustomTimeInput(e.target.value)}
-                    className="bg-transparent text-white border border-white/10 rounded px-1.5 py-0.5 text-xs font-mono font-bold focus:outline-none focus:border-sky-400"
+                    className={`border rounded px-1.5 py-0.5 text-xs font-mono font-bold focus:outline-none ${
+                      isLight
+                        ? 'bg-slate-50 text-slate-900 border-slate-200 focus:border-teal-600'
+                        : 'bg-transparent text-white border-white/10 focus:border-sky-400'
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={handleApplyCustomTime}
-                    className="px-2 py-0.5 rounded text-xs font-sans font-bold bg-sky-500 text-white hover:bg-sky-400 transition-colors"
+                    className={`px-2 py-0.5 rounded text-xs font-sans font-bold text-white transition-colors ${
+                      isLight ? 'bg-teal-600 hover:bg-teal-700' : 'bg-sky-500 hover:bg-sky-400'
+                    }`}
                   >
                     Set
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsTimePickerOpen(false)}
-                    className="p-0.5 text-slate-400 hover:text-white"
+                    className={`p-0.5 ${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-400 hover:text-white'}`}
                   >
                     <X size={12} />
                   </button>
                 </div>
               )
             ) : (
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-xs font-sans text-sky-300">
+              <div
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-sans ${
+                  isLight
+                    ? 'bg-teal-50 border-teal-200 text-teal-800'
+                    : 'bg-sky-500/15 border-sky-400/30 text-sky-300'
+                }`}
+              >
                 <Clock size={12} />
                 <span>After <strong>{formatTime12h(selectedTime)}</strong></span>
                 <button
                   type="button"
                   onClick={handleResetToNow}
-                  className="ml-1 text-slate-400 hover:text-white"
+                  className={`ml-1 ${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-400 hover:text-white'}`}
                   title="Reset to Live"
                 >
                   <X size={12} />
@@ -656,7 +761,11 @@ export function NetworkView() {
           {destinationStation && firstTrain && (
             <div
               onClick={() => firstTrain.id && navigate(`/train/${firstTrain.id}`)}
-              className="p-3.5 rounded-2xl border border-sky-400/40 bg-sky-500/10 shadow-[0_4px_16px_rgba(14,165,233,0.12)] flex flex-col gap-1.5 cursor-pointer hover:bg-sky-500/15 hover:border-sky-400/70 transition-all active:scale-[0.99]"
+              className={`p-3.5 rounded-2xl border flex flex-col gap-1.5 cursor-pointer transition-all active:scale-[0.99] ${
+                isLight
+                  ? 'border-teal-500/30 bg-teal-50/80 shadow-[0_4px_16px_rgba(15,118,110,0.08)] hover:bg-teal-100/70 hover:border-teal-500/50'
+                  : 'border-sky-400/40 bg-sky-500/10 shadow-[0_4px_16px_rgba(14,165,233,0.12)] hover:bg-sky-500/15 hover:border-sky-400/70'
+              }`}
               title={`Track Train KMRL-${firstTrain.displayId} Live`}
             >
               <div className="flex items-center justify-between">
@@ -664,28 +773,46 @@ export function NetworkView() {
                   <span
                     className={`w-2.5 h-2.5 rounded-full ${
                       firstTrain.direction === 1
-                        ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
-                        : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
+                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+                        : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
                     }`}
                   />
-                  <span className="font-sans text-sm font-extrabold text-white tracking-tight">
+                  <span
+                    className={`font-sans text-sm font-extrabold tracking-tight ${
+                      isLight ? 'text-slate-900' : 'text-white'
+                    }`}
+                  >
                     KMRL-{firstTrain.displayId}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                      isLight
+                        ? 'bg-teal-100 text-teal-800 border-teal-300'
+                        : 'bg-sky-500/20 text-sky-300 border-sky-400/30'
+                    }`}
+                  >
                     FIRST TRAIN
                   </span>
                 </div>
 
-                <span className="font-mono text-sm sm:text-base font-extrabold text-sky-400 tabular-nums">
+                <span
+                  className={`font-mono text-sm sm:text-base font-extrabold tabular-nums ${
+                    isLight ? 'text-teal-700' : 'text-sky-400'
+                  }`}
+                >
                   {firstTrain.departureDisplay || firstTrain.depTime}
                 </span>
               </div>
 
               {/* Single clean subtitle row with zero redundancy */}
-              <div className="flex items-center justify-between text-xs text-slate-300 font-sans pt-1 border-t border-white/10">
-                <span>Ride: <strong className="text-white">{firstTrain.rideMinutes} mins</strong></span>
-                <span>Arrival: <strong className="text-white font-mono">{firstTrain.arrTime || '--:--'}</strong></span>
-                <span className="text-slate-400 text-[11px] truncate max-w-[120px]">{firstTrain.status}</span>
+              <div
+                className={`flex items-center justify-between text-xs font-sans pt-1 border-t ${
+                  isLight ? 'border-teal-200/60 text-slate-600' : 'border-white/10 text-slate-300'
+                }`}
+              >
+                <span>Ride: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white'}>{firstTrain.rideMinutes} mins</strong></span>
+                <span>Arrival: <strong className={`font-mono ${isLight ? 'text-slate-900 font-bold' : 'text-white'}`}>{firstTrain.arrTime || '--:--'}</strong></span>
+                <span className={`text-[11px] truncate max-w-[120px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{firstTrain.status}</span>
               </div>
             </div>
           )}
@@ -695,7 +822,11 @@ export function NetworkView() {
             <button
               type="button"
               onClick={() => setIsDrawerExpanded(true)}
-              className="w-full py-1.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 flex items-center justify-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-all active:scale-98"
+              className={`w-full py-1.5 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-semibold transition-all active:scale-98 ${
+                isLight
+                  ? 'bg-slate-100/80 hover:bg-slate-200/80 border-slate-200 text-slate-700 hover:text-slate-900'
+                  : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/10 text-slate-300 hover:text-white'
+              }`}
             >
               <span>View {subsequentTrains.length} more upcoming metros</span>
               <ChevronUp size={14} />
@@ -714,13 +845,23 @@ export function NetworkView() {
               >
                 {/* Off-Hours Service Closed Alert */}
                 {!isOpen && (
-                  <div className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs">
-                    <Moon size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                  <div
+                    className={`p-3 rounded-2xl border flex items-start gap-2.5 text-xs ${
+                      isLight
+                        ? 'border-amber-200 bg-amber-50 text-amber-900'
+                        : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                    }`}
+                  >
+                    <Moon size={15} className={`shrink-0 mt-0.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-sans font-bold text-amber-300">Service Closed for the Night</span>
-                      <span className="text-slate-300 text-[11px] leading-relaxed">
+                      <span className={`font-sans font-bold ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
+                        Service Closed for the Night
+                      </span>
+                      <span className={`text-[11px] leading-relaxed ${isLight ? 'text-amber-800' : 'text-slate-300'}`}>
                         Kochi Metro trains have concluded operations for today. Tomorrow's morning services resume at{' '}
-                        <strong className="text-white font-semibold">{opensAt || '06:00 AM'} IST</strong>.
+                        <strong className={isLight ? 'text-amber-950 font-bold' : 'text-white font-semibold'}>
+                          {opensAt || '06:00 AM'} IST
+                        </strong>.
                       </span>
                     </div>
                   </div>
@@ -729,13 +870,19 @@ export function NetworkView() {
                 {/* Subsequent Trains Header */}
                 {destinationStation && subsequentTrains.length > 0 && (
                   <div className="flex items-center justify-between px-1 pt-1">
-                    <span className="font-sans text-[11px] text-slate-400 uppercase tracking-wider font-extrabold">
+                    <span
+                      className={`font-sans text-[11px] uppercase tracking-wider font-extrabold ${
+                        isLight ? 'text-slate-500' : 'text-slate-400'
+                      }`}
+                    >
                       LATER DEPARTURES
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsDrawerExpanded(false)}
-                      className="text-slate-400 hover:text-white text-xs flex items-center gap-1"
+                      className={`text-xs flex items-center gap-1 transition-colors ${
+                        isLight ? 'text-slate-500 hover:text-slate-800' : 'text-slate-400 hover:text-white'
+                      }`}
                     >
                       <span>Minimize</span>
                       <ChevronDown size={13} />
@@ -748,39 +895,61 @@ export function NetworkView() {
                   <div className="flex flex-col gap-2">
                     {subsequentTrains.map((train, idx) => {
                       const isNorth = train.direction === 1;
-                      const dotColor = isNorth ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]';
+                      const dotColor = isNorth
+                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+                        : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]';
 
                       return (
                         <div
                           key={train.id || idx}
                           onClick={() => train.id && navigate(`/train/${train.id}`)}
-                          className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.07] hover:border-white/20 transition-all cursor-pointer active:scale-[0.99]"
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
+                            isLight
+                              ? 'border-slate-200 bg-slate-50/70 hover:bg-slate-100/90 hover:border-slate-300 text-slate-900 shadow-sm'
+                              : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.07] hover:border-white/20 text-white'
+                          }`}
                           title={`Track Train KMRL-${train.displayId} Live`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                              <span className="font-sans text-sm font-extrabold text-white tracking-tight">
+                              <span
+                                className={`font-sans text-sm font-extrabold tracking-tight ${
+                                  isLight ? 'text-slate-900' : 'text-white'
+                                }`}
+                              >
                                 KMRL-{train.displayId}
                               </span>
                             </div>
 
-                            <span className="font-mono text-sm font-bold text-sky-400 tabular-nums">
+                            <span
+                              className={`font-mono text-sm font-bold tabular-nums ${
+                                isLight ? 'text-teal-700' : 'text-sky-400'
+                              }`}
+                            >
                               {train.departureDisplay || train.depTime}
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-[11px] text-slate-400 font-sans">
-                            <span>Ride: <strong className="text-slate-200">{train.rideMinutes} mins</strong></span>
-                            <span>Arrival: <strong className="text-white font-mono">{train.arrTime || '--:--'}</strong></span>
-                            <span className="text-slate-400 truncate max-w-[120px]">{train.status}</span>
+                          <div
+                            className={`flex items-center justify-between mt-2 pt-2 border-t text-[11px] font-sans ${
+                              isLight ? 'border-slate-200/70 text-slate-500' : 'border-white/5 text-slate-400'
+                            }`}
+                          >
+                            <span>Ride: <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>{train.rideMinutes} mins</strong></span>
+                            <span>Arrival: <strong className={`font-mono ${isLight ? 'text-slate-900' : 'text-white'}`}>{train.arrTime || '--:--'}</strong></span>
+                            <span className={`truncate max-w-[120px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{train.status}</span>
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : destinationStation && !firstTrain ? (
-                  <div className="p-6 rounded-2xl border border-white/10 bg-[#0B0F19]/80 text-center font-sans text-xs font-medium text-slate-400">
+                  <div
+                    className={`p-6 rounded-2xl border text-center font-sans text-xs font-medium ${
+                      isLight ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-white/10 bg-[#0B0F19]/80 text-slate-400'
+                    }`}
+                  >
                     {isLoadingSchedule ? 'Checking metro schedules...' : 'No upcoming trains found for this route.'}
                   </div>
                 ) : null}
@@ -789,12 +958,28 @@ export function NetworkView() {
                 {!destinationStation && (
                   <div className="flex flex-col gap-2.5">
                     {currentStation && normalizeStationId(currentStation.id) !== 'ALVA' && (
-                      <div className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                          <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
+                      <div
+                        className={`p-3 rounded-2xl border flex flex-col gap-2 ${
+                          isLight ? 'border-slate-200 bg-slate-50/70' : 'border-white/10 bg-white/[0.02]'
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-between border-b pb-1.5 ${
+                            isLight ? 'border-slate-200' : 'border-white/10'
+                          }`}
+                        >
+                          <span
+                            className={`font-sans text-xs sm:text-sm font-bold tracking-tight ${
+                              isLight ? 'text-slate-900' : 'text-white'
+                            }`}
+                          >
                             Towards Aluva
                           </span>
-                          <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
+                          <span
+                            className={`font-sans text-[10px] font-bold uppercase ${
+                              isLight ? 'text-slate-500' : 'text-slate-400'
+                            }`}
+                          >
                             Platform 1
                           </span>
                         </div>
@@ -805,20 +990,28 @@ export function NetworkView() {
                               <div
                                 key={arr.train.id}
                                 onClick={() => arr.train?.id && navigate(`/train/${arr.train.id}`)}
-                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/20 hover:bg-white/[0.06] flex items-center justify-between text-xs cursor-pointer transition-all active:scale-[0.99]"
+                                className={`p-2 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all active:scale-[0.99] ${
+                                  isLight
+                                    ? 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-100/70 text-slate-900 shadow-xs'
+                                    : 'bg-white/[0.02] border-white/5 hover:border-white/20 hover:bg-white/[0.06] text-white'
+                                }`}
                                 title={`Track Train KMRL-${arr.train.id.replace('KMRL-', '')} Live`}
                               >
-                                <span className="font-bold text-white">
+                                <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                                   KMRL-{arr.train.id.replace('KMRL-', '')}
                                 </span>
-                                <span className="font-mono text-emerald-400 font-bold">
+                                <span
+                                  className={`font-mono font-bold ${
+                                    isLight ? 'text-emerald-600' : 'text-emerald-400'
+                                  }`}
+                                >
                                   {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-[11px] text-slate-500 py-1 text-center">
+                          <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
                             {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
                           </span>
                         )}
@@ -826,12 +1019,28 @@ export function NetworkView() {
                     )}
 
                     {currentStation && normalizeStationId(currentStation.id) !== 'TPHT' && (
-                      <div className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                          <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
+                      <div
+                        className={`p-3 rounded-2xl border flex flex-col gap-2 ${
+                          isLight ? 'border-slate-200 bg-slate-50/70' : 'border-white/10 bg-white/[0.02]'
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-between border-b pb-1.5 ${
+                            isLight ? 'border-slate-200' : 'border-white/10'
+                          }`}
+                        >
+                          <span
+                            className={`font-sans text-xs sm:text-sm font-bold tracking-tight ${
+                              isLight ? 'text-slate-900' : 'text-white'
+                            }`}
+                          >
                             Towards Thripunithura
                           </span>
-                          <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
+                          <span
+                            className={`font-sans text-[10px] font-bold uppercase ${
+                              isLight ? 'text-slate-500' : 'text-slate-400'
+                            }`}
+                          >
                             Platform 2
                           </span>
                         </div>
@@ -842,20 +1051,28 @@ export function NetworkView() {
                               <div
                                 key={arr.train.id}
                                 onClick={() => arr.train?.id && navigate(`/train/${arr.train.id}`)}
-                                className="p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/20 hover:bg-white/[0.06] flex items-center justify-between text-xs cursor-pointer transition-all active:scale-[0.99]"
+                                className={`p-2 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all active:scale-[0.99] ${
+                                  isLight
+                                    ? 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-100/70 text-slate-900 shadow-xs'
+                                    : 'bg-white/[0.02] border-white/5 hover:border-white/20 hover:bg-white/[0.06] text-white'
+                                }`}
                                 title={`Track Train KMRL-${arr.train.id.replace('KMRL-', '')} Live`}
                               >
-                                <span className="font-bold text-white">
+                                <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                                   KMRL-{arr.train.id.replace('KMRL-', '')}
                                 </span>
-                                <span className="font-mono text-amber-400 font-bold">
+                                <span
+                                  className={`font-mono font-bold ${
+                                    isLight ? 'text-amber-600' : 'text-amber-400'
+                                  }`}
+                                >
                                   {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-[11px] text-slate-500 py-1 text-center">
+                          <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
                             {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
                           </span>
                         )}
@@ -877,6 +1094,7 @@ export function NetworkView() {
         stations={stations}
         activeStation={currentStation}
         destinationStation={destinationStation}
+        theme={currentTheme}
         onSelectStation={(st, isDestination) => {
           if (isDestination) {
             setDestinationStation(st);

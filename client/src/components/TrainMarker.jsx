@@ -64,6 +64,8 @@ export function TrainMarker({
 
   // Visual style definitions based on state and direction
   const visualConfig = useMemo(() => {
+    const isLight = theme?.isLight;
+
     if (isRecommended) {
       // High-priority Swiss Signal Red for recommended journey train
       return {
@@ -71,7 +73,9 @@ export function TrainMarker({
         bodyGrad: ['#FF2E5B', '#BE123C'],
         strokeColor: '#FFFFFF',
         strokeWidth: 1.6,
-        glowFilter: 'drop-shadow(0 0 10px rgba(225, 29, 72, 0.95))',
+        glowFilter: isLight
+          ? 'drop-shadow(0 2px 6px rgba(225, 29, 72, 0.45))'
+          : 'drop-shadow(0 0 10px rgba(225, 29, 72, 0.95))',
         beamGradient: 'linear-gradient(to top, rgba(225, 29, 72, 0.6), rgba(225, 29, 72, 0))',
         badgeColor: '#FB7185',
         pingClass: 'bg-rose-500/40',
@@ -81,26 +85,36 @@ export function TrainMarker({
     if (isSelected) {
       return {
         id: 'selected',
-        bodyGrad: ['#38BDF8', '#0284C7'],
+        bodyGrad: isLight ? ['#0284C7', '#0369A1'] : ['#38BDF8', '#0284C7'],
         strokeColor: '#FFFFFF',
         strokeWidth: 2,
-        glowFilter: 'drop-shadow(0 0 12px rgba(56, 189, 248, 0.9))',
-        beamGradient: 'linear-gradient(to top, rgba(56, 189, 248, 0.6), rgba(56, 189, 248, 0))',
-        badgeColor: '#38BDF8',
+        glowFilter: isLight
+          ? 'drop-shadow(0 2px 6px rgba(2, 132, 199, 0.45))'
+          : 'drop-shadow(0 0 12px rgba(56, 189, 248, 0.9))',
+        beamGradient: isLight
+          ? 'linear-gradient(to top, rgba(2, 132, 199, 0.45), rgba(2, 132, 199, 0))'
+          : 'linear-gradient(to top, rgba(56, 189, 248, 0.6), rgba(56, 189, 248, 0))',
+        badgeColor: isLight ? '#0284C7' : '#38BDF8',
         pingClass: null,
       };
     }
 
     if (isNorthbound) {
-      // Northbound (Towards Aluva): Ice Aurora Sky Blue
+      // Northbound (Towards Aluva):
+      // In Light: Deep KMRL Teal with white stroke and crisp shadow
+      // In Dark: Ice Aurora Sky Blue with cyan glow
       return {
         id: 'northbound',
-        bodyGrad: ['#38BDF8', '#0284C7'],
-        strokeColor: '#7DD3FC',
-        strokeWidth: 1.1,
-        glowFilter: 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.6))',
-        beamGradient: 'linear-gradient(to top, rgba(56, 189, 248, 0.45), rgba(56, 189, 248, 0))',
-        badgeColor: '#38BDF8',
+        bodyGrad: isLight ? ['#0D9488', '#0F766E'] : ['#38BDF8', '#0284C7'],
+        strokeColor: isLight ? '#FFFFFF' : '#7DD3FC',
+        strokeWidth: isLight ? 1.4 : 1.1,
+        glowFilter: isLight
+          ? 'drop-shadow(0 2px 5px rgba(15, 118, 110, 0.4))'
+          : 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.6))',
+        beamGradient: isLight
+          ? 'linear-gradient(to top, rgba(15, 118, 110, 0.35), rgba(15, 118, 110, 0))'
+          : 'linear-gradient(to top, rgba(56, 189, 248, 0.45), rgba(56, 189, 248, 0))',
+        badgeColor: isLight ? '#0F766E' : '#38BDF8',
         pingClass: null,
       };
     }
@@ -108,15 +122,19 @@ export function TrainMarker({
     // Southbound (Towards Thripunithura): Solar Amber / Electric Gold
     return {
       id: 'southbound',
-      bodyGrad: ['#F59E0B', '#D97706'],
-      strokeColor: '#FDE68A',
-      strokeWidth: 1.1,
-      glowFilter: 'drop-shadow(0 0 6px rgba(245, 158, 11, 0.6))',
-      beamGradient: 'linear-gradient(to top, rgba(245, 158, 11, 0.45), rgba(245, 158, 11, 0))',
-      badgeColor: '#FBBF24',
+      bodyGrad: isLight ? ['#D97706', '#B45309'] : ['#F59E0B', '#D97706'],
+      strokeColor: isLight ? '#FFFFFF' : '#FDE68A',
+      strokeWidth: isLight ? 1.4 : 1.1,
+      glowFilter: isLight
+        ? 'drop-shadow(0 2px 5px rgba(217, 119, 6, 0.4))'
+        : 'drop-shadow(0 0 6px rgba(245, 158, 11, 0.6))',
+      beamGradient: isLight
+        ? 'linear-gradient(to top, rgba(217, 119, 6, 0.35), rgba(217, 119, 6, 0))'
+        : 'linear-gradient(to top, rgba(245, 158, 11, 0.45), rgba(245, 158, 11, 0))',
+      badgeColor: isLight ? '#D97706' : '#FBBF24',
       pingClass: null,
     };
-  }, [isRecommended, isSelected, isNorthbound]);
+  }, [isRecommended, isSelected, isNorthbound, theme]);
 
   const gradientId = `train-grad-${train.id}`;
 
@@ -288,9 +306,19 @@ export function TrainMarker({
 
         {/* Minimalist High-Precision Telemetry Hover Tooltip */}
         <div className="absolute -top-11 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-40">
-          <div className="px-2.5 py-1.5 rounded-xl bg-[#090F1B]/95 border border-white/15 backdrop-blur-md text-[10px] font-sans shadow-2xl flex flex-col gap-0.5 whitespace-nowrap min-w-[130px]">
+          <div
+            className={`px-2.5 py-1.5 rounded-xl border backdrop-blur-md text-[10px] font-sans flex flex-col gap-0.5 whitespace-nowrap min-w-[130px] ${
+              theme?.isLight
+                ? 'bg-white/95 border-slate-200 shadow-xl text-slate-800'
+                : 'bg-[#090F1B]/95 border-white/15 shadow-2xl text-white'
+            }`}
+          >
             {/* Header: Direction and Train ID */}
-            <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1">
+            <div
+              className={`flex items-center justify-between gap-2 border-b pb-1 ${
+                theme?.isLight ? 'border-slate-100' : 'border-white/10'
+              }`}
+            >
               <span
                 className="font-sans font-extrabold flex items-center gap-1 tracking-tight"
                 style={{ color: visualConfig.badgeColor }}
@@ -298,7 +326,13 @@ export function TrainMarker({
                 <span>{directionGlyph}</span>
                 <span>TRAIN <span className="font-mono font-bold">{trainShortId}</span></span>
               </span>
-              <span className="text-white font-sans font-bold text-[9px] px-1.5 py-0.5 rounded bg-white/10 tracking-wider">
+              <span
+                className={`font-sans font-bold text-[9px] px-1.5 py-0.5 rounded tracking-wider ${
+                  theme?.isLight
+                    ? 'bg-slate-100 text-slate-700'
+                    : 'bg-white/10 text-white'
+                }`}
+              >
                 ➔ {directionLabel}
               </span>
             </div>
@@ -307,7 +341,9 @@ export function TrainMarker({
             <div className="flex items-center gap-1.5 pt-0.5 text-[9px]">
               <span
                 className={`font-sans font-bold ${
-                  train.isDwelling ? 'text-amber-400' : 'text-emerald-400'
+                  train.isDwelling
+                    ? theme?.isLight ? 'text-amber-600' : 'text-amber-400'
+                    : theme?.isLight ? 'text-emerald-600' : 'text-emerald-400'
                 }`}
               >
                 {train.isDwelling ? (
@@ -320,8 +356,12 @@ export function TrainMarker({
               </span>
               {train.nextStation && (
                 <>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-slate-300 font-sans font-medium truncate max-w-[95px]">
+                  <span className={theme?.isLight ? 'text-slate-300' : 'text-slate-600'}>•</span>
+                  <span
+                    className={`font-sans font-medium truncate max-w-[95px] ${
+                      theme?.isLight ? 'text-slate-600' : 'text-slate-300'
+                    }`}
+                  >
                     Next: {train.nextStation}
                   </span>
                 </>

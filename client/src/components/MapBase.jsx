@@ -29,17 +29,17 @@ export function MapBase({
   onSelectStation,
   padding,
   mapRef: externalMapRef,
-  theme = THEMES.nordic,
+  theme = THEMES.dark,
 }) {
   const internalMapRef = useRef(null);
   const mapRef = externalMapRef || internalMapRef;
   const { trains, stations, tracksGeoJSON, activeStation, setActiveStation } = useStationContext();
 
-  const activeTheme = theme || THEMES.nordic;
+  const activeTheme = theme || THEMES.dark;
 
   // Dynamic schematic circuit style with Kochi water silhouettes adapting to theme
   const circuitStyle = useMemo(() => {
-    const mapColors = activeTheme.map || THEMES.kmrl.map;
+    const mapColors = activeTheme.map || THEMES.dark.map;
     return {
       version: 8,
       name: 'KMRL Schematic Circuit',
@@ -287,11 +287,20 @@ export function MapBase({
                 const isOrigin = routeHighlight && (normStId === normOrigin);
                 const isDest = routeHighlight && (normStId === normDest);
 
-                let nodeClass = 'w-2 h-2 bg-white group-hover:scale-125';
+                const ringOffsetClass = activeTheme.isLight ? 'ring-offset-[#F8FAFC]' : 'ring-offset-[#0B0F17]';
+
+                let nodeClass = activeTheme.isLight
+                  ? 'w-2 h-2 bg-slate-800 border border-slate-700/50 group-hover:scale-125'
+                  : 'w-2 h-2 bg-white group-hover:scale-125';
+
                 if (isDest) {
-                  nodeClass = 'w-2.5 h-2.5 bg-white ring-2 ring-[#E11D48] ring-offset-2 ring-offset-[#0B0F17] shadow-[0_0_10px_rgba(225,29,72,0.9)]';
+                  nodeClass = activeTheme.isLight
+                    ? `w-2.5 h-2.5 bg-[#E11D48] ring-2 ring-[#E11D48] ring-offset-2 ${ringOffsetClass} shadow-[0_0_10px_rgba(225,29,72,0.6)]`
+                    : `w-2.5 h-2.5 bg-white ring-2 ring-[#E11D48] ring-offset-2 ${ringOffsetClass} shadow-[0_0_10px_rgba(225,29,72,0.9)]`;
                 } else if (isOrigin || isActive) {
-                  nodeClass = 'w-2.5 h-2.5 bg-white ring-2 ring-[#38BDF8] ring-offset-2 ring-offset-[#0B0F17] shadow-[0_0_10px_rgba(56,189,248,0.9)]';
+                  nodeClass = activeTheme.isLight
+                    ? `w-2.5 h-2.5 bg-[#0F766E] ring-2 ring-[#0F766E] ring-offset-2 ${ringOffsetClass} shadow-[0_0_10px_rgba(15,118,110,0.6)]`
+                    : `w-2.5 h-2.5 bg-white ring-2 ring-[#38BDF8] ring-offset-2 ${ringOffsetClass} shadow-[0_0_10px_rgba(56,189,248,0.9)]`;
                 }
 
                 return (
@@ -304,7 +313,11 @@ export function MapBase({
                   <span
                     className={`font-sans text-[10px] tracking-tight font-semibold transition-colors ${
                       isActive
-                        ? 'text-white font-bold'
+                        ? activeTheme.isLight
+                          ? 'text-slate-900 font-extrabold'
+                          : 'text-white font-extrabold'
+                        : activeTheme.isLight
+                        ? 'text-slate-600 group-hover:text-slate-900'
                         : 'text-slate-400 group-hover:text-slate-200'
                     }`}
                   >
