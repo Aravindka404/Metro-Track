@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Kochi Metro Radar",
+    "slug": "kochi-metro-radar",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0B0F19"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kochimetro.radar"
+    },
+    "android": {
+      "package": "com.kochimetro.radar",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0F19",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      }
+    }
+  }
+}
