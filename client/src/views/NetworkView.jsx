@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, ArrowUpDown, Clock, X, Sparkles, Moon } from 'lucide-react';
+import { ChevronUp, ChevronDown, Clock, X, Sparkles, Moon, Navigation, Compass } from 'lucide-react';
 import { MapBase } from '../components/MapBase.jsx';
+import { StationPills } from '../components/StationPills.jsx';
+import { StationPickerModal } from '../components/StationPickerModal.jsx';
 import { useStationContext } from '../context/useStationContext.jsx';
 import {
   calculateKochiMetroFare,
@@ -69,29 +71,29 @@ export function NetworkView() {
 
   const currentStation = activeStation || nearestStation;
 
-  // Boarding & Destination state
+  // Destination & Drawer state
   const [destinationStation, setDestinationStation] = useState(null);
   const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
-
-  // Accordion drawer: index of the currently expanded train (default: 0 = readily available)
   const [selectedTrainIdx, setSelectedTrainIdx] = useState(0);
 
-  // Time-based travel planning state (null = silent live default)
-  const [selectedTime, setSelectedTime] = useState(null); // 'HH:MM' or null
+  // Station picker modal state ('origin' | 'destination' | null)
+  const [stationPickerMode, setStationPickerMode] = useState(null);
+
+  // Depart later time planning state (null = silent live default)
+  const [selectedTime, setSelectedTime] = useState(null);
   const [customTimeInput, setCustomTimeInput] = useState('17:30');
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const [scheduledDepartures, setScheduledDepartures] = useState([]);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
 
-  // Reset selected train index whenever origin, destination, or time changes
+  // Reset selected train index whenever route or time changes
   useEffect(() => {
     setSelectedTrainIdx(0);
   }, [currentStation?.id, destinationStation?.id, selectedTime]);
 
-  // Active visual style: Nordic Frost with Swiss Signal Red Route Highlight
   const currentTheme = THEMES.nordic;
 
-  // Responsive mobile state
+  // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 768
   );
@@ -105,8 +107,8 @@ export function NetworkView() {
   const mapPadding = useMemo(() => {
     if (isMobile) {
       return {
-        bottom: Math.round(window.innerHeight * 0.45),
-        top: 20,
+        bottom: isDrawerExpanded ? Math.round(window.innerHeight * 0.5) : 170,
+        top: 80,
         left: 20,
         right: 20,
       };
@@ -114,10 +116,10 @@ export function NetworkView() {
     return {
       bottom: 40,
       top: 40,
-      left: 500,
+      left: 480,
       right: 40,
     };
-  }, [isMobile]);
+  }, [isMobile, isDrawerExpanded]);
 
   const [viewState, setViewState] = useState({
     longitude: 76.315,
@@ -125,18 +127,7 @@ export function NetworkView() {
     zoom: 12.5,
   });
 
-  // Fallback to Tripunithura if location is denied
-  const getTripunithuraStation = useCallback((stList) => {
-    if (!stList || stList.length === 0) return null;
-    return (
-      stList.find(
-        (s) =>
-          normalizeStationId(s.id) === 'TPHT' ||
-          s.name.toLowerCase().includes('tripunithura')
-      ) || stList[stList.length - 1]
-    );
-  }, []);
-
+  // Geolocation detection
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -148,50 +139,40 @@ export function NetworkView() {
           if (stations.length > 0) {
             const nearest = getNearestStation(lat, lon, stations);
             setNearestStation(nearest);
-            if (!activeStation) setActiveStation(nearest);
           }
         },
         () => {
-          if (stations.length > 0) {
-            const fallback = getTripunithuraStation(stations);
-            if (fallback) {
-              setNearestStation(fallback);
-              if (!activeStation) setActiveStation(fallback);
-            }
+          // Geolocation declined; fallback to first station (Aluva)
+          if (stations.length > 0 && !activeStation) {
+            setActiveStation(stations[0]);
           }
         },
-        { enableHighAccuracy: true, timeout: 6000 }
+        { enableHighAccuracy: false, timeout: 8000 }
       );
-    } else if (stations.length > 0) {
-      const fallback = getTripunithuraStation(stations);
-      if (fallback) {
-        setNearestStation(fallback);
-        if (!activeStation) setActiveStation(fallback);
+    }
+  }, [stations, activeStation, setActiveStation, setNearestStation, setUserLocation]);
+
+  // Fallback initial station if none set
+  useEffect(() => {
+    if (stations.length > 0 && !activeStation && !nearestStation) {
+      setActiveStation(stations[0]);
+    }
+  }, [stations, activeStation, nearestStation, setActiveStation]);
+
+  // Set default destination (e.g. Edapally if starting at Aluva)
+  useEffect(() => {
+    if (stations.length > 0 && !destinationStation && currentStation) {
+      const edap = stations.find((s) => normalizeStationId(s.id) === 'EDAP');
+      if (edap && edap.id !== currentStation.id) {
+        setDestinationStation(edap);
+      } else {
+        const alt = stations.find((s) => s.id !== currentStation.id);
+        if (alt) setDestinationStation(alt);
       }
     }
-  }, [stations, setUserLocation, setNearestStation, setActiveStation, activeStation, getTripunithuraStation]);
+  }, [stations, currentStation, destinationStation]);
 
-  useEffect(() => {
-    if (userLocation && stations.length > 0 && !nearestStation) {
-      const nearest = getNearestStation(userLocation.lat, userLocation.lon, stations);
-      setNearestStation(nearest);
-      if (!activeStation) setActiveStation(nearest);
-    } else if (stations.length > 0 && !activeStation) {
-      const fallback = getTripunithuraStation(stations);
-      if (fallback) setActiveStation(fallback);
-    }
-  }, [userLocation, stations, nearestStation, activeStation, setNearestStation, setActiveStation, getTripunithuraStation]);
-
-  // Reset destination if user sets boarding station equal to destination
-  useEffect(() => {
-    if (currentStation && destinationStation) {
-      if (normalizeStationId(currentStation.id) === normalizeStationId(destinationStation.id)) {
-        setDestinationStation(null);
-      }
-    }
-  }, [currentStation, destinationStation]);
-
-  // Fetch scheduled departures when destination and origin are selected (or time changes)
+  // Fetch scheduled departures when route or custom time changes
   useEffect(() => {
     if (!currentStation || !destinationStation) {
       setScheduledDepartures([]);
@@ -201,101 +182,74 @@ export function NetworkView() {
     setIsLoadingSchedule(true);
     const originId = currentStation.id;
     const destId = destinationStation.id;
-    const apiBase = import.meta.env.VITE_BACKEND_URL || '';
-    const url = `${apiBase}/api/plan?origin=${originId}&destination=${destId}&time=${selectedTime || ''}`;
+    const timeParam = selectedTime ? `&time=${selectedTime}` : '';
 
-    fetch(url)
-      .then((res) => res.json())
+    fetch(`/api/plan?origin=${originId}&destination=${destId}${timeParam}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         setScheduledDepartures(data.departures || []);
         setIsLoadingSchedule(false);
       })
-      .catch((err) => {
-        console.warn('[Schedule] error querying plan:', err);
+      .catch(() => {
         setIsLoadingSchedule(false);
       });
-  }, [selectedTime, currentStation?.id, destinationStation?.id]);
+  }, [currentStation?.id, destinationStation?.id, selectedTime]);
 
-  // Full-corridor live arrivals for currentStation
+  // Live approaching trains for current station
   const liveStationArrivals = useMemo(() => {
-    if (!currentStation || !trains || trains.length === 0) {
+    if (!currentStation || !trains.length) {
       return { north: [], south: [] };
     }
 
-    const normTargetId = normalizeStationId(currentStation.id);
-    const targetName = currentStation.name.toLowerCase();
+    const currentId = normalizeStationId(currentStation.id);
+    const arrivalsNorth = [];
+    const arrivalsSouth = [];
 
-    const arrivals = [];
+    trains.forEach((train) => {
+      const remStops = train.remainingStops || [];
+      const stopEntry = remStops.find((s) => normalizeStationId(s.stopId) === currentId);
 
-    for (const train of trains) {
-      let etaSec = null;
-
-      if (
-        normalizeStationId(train.nextStationId) === normTargetId ||
-        train.nextStation.toLowerCase() === targetName
-      ) {
-        etaSec = train.etaSeconds;
-      } else if (train.remainingStops && train.remainingStops.length > 0) {
-        const matchedStop = train.remainingStops.find(
-          (s) =>
-            normalizeStationId(s.stopId) === normTargetId ||
-            s.stopName.toLowerCase() === targetName
-        );
-        if (matchedStop) {
-          etaSec = matchedStop.etaSeconds;
+      if (stopEntry) {
+        const item = {
+          train,
+          etaSeconds: stopEntry.etaSeconds,
+          currentLocation: train.statusText || 'In transit',
+        };
+        if (train.direction === 1) {
+          arrivalsNorth.push(item);
+        } else {
+          arrivalsSouth.push(item);
         }
       }
+    });
 
-      if (etaSec !== null) {
-        arrivals.push({
-          train,
-          etaSeconds: etaSec,
-          directionId: train.directionId, // 1 = Towards Aluva, 0 = Towards Thripunithura
-          currentLocation: train.isDwelling
-            ? `At ${train.nextStation}`
-            : `Approaching ${train.nextStation}`,
-        });
-      }
-    }
+    arrivalsNorth.sort((a, b) => a.etaSeconds - b.etaSeconds);
+    arrivalsSouth.sort((a, b) => a.etaSeconds - b.etaSeconds);
 
-    const north = arrivals
-      .filter((a) => a.directionId === 1)
-      .sort((a, b) => a.etaSeconds - b.etaSeconds);
-
-    const south = arrivals
-      .filter((a) => a.directionId === 0)
-      .sort((a, b) => a.etaSeconds - b.etaSeconds);
-
-    return { north, south };
+    return { north: arrivalsNorth, south: arrivalsSouth };
   }, [currentStation, trains]);
 
-  // Combined Trip Intelligence (Unified 4-Train Accordion: Readily Available + Next 3 Upcoming)
+  // Combined Trip Planning Computations
   const tripPlan = useMemo(() => {
-    if (
-      !currentStation ||
-      !destinationStation ||
-      normalizeStationId(currentStation.id) === normalizeStationId(destinationStation.id)
-    ) {
-      return null;
-    }
-
-    const direction = getTripDirection(currentStation.id, destinationStation.id);
-    if (direction === null) return null;
+    if (!currentStation || !destinationStation) return null;
 
     const fare = calculateKochiMetroFare(currentStation.id, destinationStation.id);
     const hops = getStationHopCount(currentStation.id, destinationStation.id);
     const rideMinutes = estimateRideDurationMinutes(currentStation.id, destinationStation.id);
+    const direction = getTripDirection(currentStation.id, destinationStation.id);
 
-    // If user selected a custom departure time (e.g. 5:30 PM):
     if (selectedTime) {
-      const scheduledList = (scheduledDepartures || []).slice(0, 4).map((dep) => ({
+      const scheduledList = (scheduledDepartures || []).map((dep) => ({
         id: dep.trainId,
         displayId: dep.trainId.replace('KMRL-', ''),
         isLive: false,
         depTime: dep.depTime,
         arrTime: dep.arrTime,
-        departureDisplay: `Departs ${dep.depTime}`,
-        status: `Scheduled departure at ${dep.depTime}`,
+        departureDisplay: dep.depTime,
+        status: `Scheduled (${dep.depTime})`,
         waitEtaSeconds: dep.etaSeconds,
         rideMinutes: dep.rideMinutes || rideMinutes,
       }));
@@ -310,7 +264,7 @@ export function NetworkView() {
       };
     }
 
-    // Default: Live Mode (Readily Available First Train + Next 3 Upcoming Metros)
+    // Default: Live Mode
     const normDestId = normalizeStationId(destinationStation.id);
     const relevantLiveArrivals = (direction === 1 ? liveStationArrivals.north : liveStationArrivals.south).filter(
       (arr) => {
@@ -353,6 +307,7 @@ export function NetworkView() {
         id: arr.train.id,
         displayId: arr.train.id.replace('KMRL-', ''),
         isLive: true,
+        direction: arr.train.direction,
         depTime,
         arrTime,
         departureDisplay: depDisplay,
@@ -362,7 +317,7 @@ export function NetworkView() {
       });
     }
 
-    // 2. Backfill with scheduled departures if fewer than 4 live trains to guarantee 4 options
+    // 2. Backfill with scheduled departures if fewer than 4 live trains
     if (journeyTrains.length < 4 && scheduledDepartures && scheduledDepartures.length > 0) {
       for (const dep of scheduledDepartures) {
         if (journeyTrains.length >= 4) break;
@@ -371,10 +326,11 @@ export function NetworkView() {
             id: dep.trainId,
             displayId: dep.trainId.replace('KMRL-', ''),
             isLive: false,
+            direction: dep.directionId,
             depTime: dep.depTime,
             arrTime: dep.arrTime,
             departureDisplay: dep.depTime,
-            status: `Scheduled departure at ${dep.depTime}`,
+            status: `Scheduled at ${dep.depTime}`,
             waitEtaSeconds: dep.etaSeconds,
             rideMinutes: dep.rideMinutes || rideMinutes,
           });
@@ -428,8 +384,13 @@ export function NetworkView() {
     setIsTimePickerOpen(false);
   };
 
-  const isTerminalNorth = currentStation && normalizeStationId(currentStation.id) === 'ALVA';
-  const isTerminalSouth = currentStation && normalizeStationId(currentStation.id) === 'TPHT';
+  const handleRecenterCorridor = () => {
+    setViewState({
+      longitude: 76.315,
+      latitude: 10.025,
+      zoom: 12.5,
+    });
+  };
 
   const activeTrain = tripPlan?.journeyTrains?.[selectedTrainIdx] || tripPlan?.journeyTrains?.[0];
 
@@ -438,7 +399,7 @@ export function NetworkView() {
       className="w-full min-h-[100dvh] h-[100dvh] relative overflow-hidden text-white font-sans select-none overscroll-y-contain transition-colors duration-300"
       style={{ backgroundColor: currentTheme.bgApp }}
     >
-      {/* 2D Schematic Circuit Map */}
+      {/* 2D/3D MapLibre Vector Radar Map */}
       <MapBase
         viewState={viewState}
         onViewStateChange={setViewState}
@@ -453,48 +414,59 @@ export function NetworkView() {
         theme={currentTheme}
       />
 
-      {/* Clean Minimal Header Bar */}
-      <header className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-20 flex items-center justify-between pointer-events-none gap-2">
-        <div className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-white/10 bg-[#0E1524]/90 backdrop-blur-md flex items-center gap-2.5 sm:gap-3 shadow-lg">
+      {/* Floating Frosted Header HUD */}
+      <header className="absolute top-3 left-3 right-3 sm:top-5 sm:left-6 sm:right-6 z-20 flex items-center justify-between pointer-events-none gap-2">
+        <div className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl border border-white/15 bg-[#0E1626]/90 backdrop-blur-xl flex items-center gap-2.5 sm:gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
           <span className="font-sans text-xs font-extrabold tracking-wider text-white uppercase">
             KOCHI METRO RADAR
           </span>
-          <div className="h-3 w-[1px] bg-white/15" />
+          <div className="h-3 w-[1px] bg-white/20" />
           {isOpen ? (
             <span className="font-sans text-xs text-slate-300 font-medium">
-              <strong className="font-mono font-bold text-white">{activeTrainsCount}</strong> trains active
+              <strong className="font-mono font-bold text-white">{activeTrainsCount}</strong> active
             </span>
           ) : (
             <span className="font-sans text-xs text-amber-300 font-semibold flex items-center gap-1.5">
               Service Closed
             </span>
           )}
-          <div className="h-3 w-[1px] bg-white/15 hidden sm:block" />
+          <div className="h-3 w-[1px] bg-white/20 hidden sm:block" />
           <span className="font-mono text-xs text-slate-400 hidden sm:inline tabular-nums">
-            {istTime || '--:--:--'} <span className="font-sans text-[10px] font-semibold tracking-wider text-slate-500">IST</span>
+            {istTime || '--:--:--'} <span className="font-sans text-[10px] font-bold text-slate-500">IST</span>
           </span>
         </div>
 
-        {/* Live Network Telemetry / Closed Badge */}
-        {isOpen ? (
-          <div className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/10 bg-[#0E1626]/85 backdrop-blur-md flex items-center gap-2 shadow-lg">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-            <span className="font-sans text-xs font-extrabold text-white tracking-wider">LIVE</span>
-          </div>
-        ) : (
-          <div className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-amber-500/30 bg-[#17141F]/90 backdrop-blur-md flex items-center gap-2 shadow-lg">
-            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
-            <span className="font-sans text-[11px] sm:text-xs font-bold text-amber-300 tracking-wide uppercase">
-              Opens {opensAt || '06:00 AM'}
-            </span>
-          </div>
-        )}
+        {/* Live Network Status Badge + Recenter Action */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {isOpen ? (
+            <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border border-white/15 bg-[#0E1626]/90 backdrop-blur-xl flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+              <span className="font-sans text-xs font-extrabold text-white tracking-wider">LIVE</span>
+            </div>
+          ) : (
+            <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border border-amber-500/30 bg-[#17141F]/90 backdrop-blur-xl flex items-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
+              <span className="font-sans text-[11px] sm:text-xs font-bold text-amber-300 tracking-wide uppercase">
+                Opens {opensAt || '06:00 AM'}
+              </span>
+            </div>
+          )}
+
+          {/* Recenter Map Button */}
+          <button
+            onClick={handleRecenterCorridor}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-white/15 bg-[#0E1626]/90 hover:bg-[#152238] backdrop-blur-xl flex items-center justify-center text-slate-300 hover:text-white shadow-lg active:scale-95 transition-all"
+            title="Recenter Metro Corridor"
+          >
+            <Compass size={18} strokeWidth={2.2} />
+          </button>
+        </div>
       </header>
 
       {/* Floating Commuter Drawer / Mobile Bottom Sheet */}
       <motion.div
         drag={isMobile ? 'y' : false}
-        dragConstraints={{ top: 0, bottom: 200 }}
+        dragConstraints={{ top: 0, bottom: 250 }}
         dragElastic={0.15}
         onDragEnd={(e, info) => {
           if (info.offset.y > 60) {
@@ -503,483 +475,294 @@ export function NetworkView() {
             setIsDrawerExpanded(true);
           }
         }}
-        animate={{ y: isDrawerExpanded ? 0 : 'calc(100% - 64px)' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[460px] z-30 pointer-events-auto overscroll-y-contain"
+        animate={{
+          y: isMobile
+            ? isDrawerExpanded
+              ? 0
+              : 'calc(100% - 156px)'
+            : 0,
+        }}
+        transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+        className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[440px] z-30 pointer-events-auto overscroll-y-contain"
       >
         <div
-          className={`p-4 sm:p-5 rounded-t-3xl sm:rounded-2xl border ${currentTheme.drawerBorder} ${currentTheme.drawerBg} backdrop-blur-xl flex flex-col gap-3.5 max-h-[85vh] sm:max-h-[82vh] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.6)] transition-colors duration-300`}
+          className={`p-4 sm:p-5 rounded-t-[28px] sm:rounded-3xl border ${currentTheme.drawerBorder} ${currentTheme.drawerBg} backdrop-blur-2xl flex flex-col gap-3 max-h-[82vh] sm:max-h-[80vh] overflow-hidden shadow-[0_16px_50px_rgba(0,0,0,0.7)] transition-all duration-300`}
         >
-          {/* Mobile Swipe Grab Bar */}
+          {/* Mobile Swipe Grab Handle */}
           <div
             onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
-            className="w-12 h-1.5 rounded-full bg-white/25 mx-auto cursor-grab active:cursor-grabbing sm:hidden mb-0.5"
+            className="w-12 h-1.5 rounded-full bg-white/25 hover:bg-white/40 mx-auto cursor-grab active:cursor-grabbing sm:hidden -mt-1 mb-1"
           />
 
-          {/* Drawer Header Toggle (Price removed from header to eliminate redundancy) */}
-          <div
-            onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
-            className="flex items-center justify-between cursor-pointer border-b border-white/10 pb-2.5 select-none"
-          >
-            <div className="flex items-center gap-2 min-w-0 pr-2">
-              <span className="font-sans text-sm sm:text-base font-bold text-white tracking-tight truncate">
-                {destinationStation
-                  ? `${currentStation?.name} ➔ ${destinationStation.name}`
-                  : `${currentStation?.name || 'Kochi'} Station`}
+          {/* Interactive Station Pills Selector */}
+          <StationPills
+            originStation={currentStation}
+            destinationStation={destinationStation}
+            onOpenPicker={(mode) => setStationPickerMode(mode)}
+            onSwap={handleSwapStations}
+            onClearDestination={handleClearDestination}
+            theme={currentTheme}
+          />
+
+          {/* Quick Route Stats Strip & Time Planning Row */}
+          <div className="flex items-center justify-between px-1 border-b border-white/10 pb-2.5">
+            {destinationStation && tripPlan ? (
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-xl sm:text-2xl font-extrabold text-rose-500">
+                  ₹{tripPlan.fare}
+                </span>
+                <span className="font-sans text-xs text-slate-300 font-medium">
+                  {tripPlan.hops} stops • ~{tripPlan.rideMinutes} mins
+                </span>
+              </div>
+            ) : (
+              <span className="font-sans text-xs text-slate-400 font-medium">
+                Choose destination to plan fare & route
               </span>
-            </div>
+            )}
 
-            <button className="text-slate-400 hover:text-white p-1 transition-colors shrink-0">
-              {isDrawerExpanded ? <ChevronDown size={18} strokeWidth={2} /> : <ChevronUp size={18} strokeWidth={2} />}
-            </button>
-          </div>
-
-          {/* Drawer Body Area */}
-          <div className="overflow-y-auto flex flex-col gap-3.5 pr-1 pb-1">
-            {/* Premium Station Selector Card */}
-            <div
-              className={`p-3.5 sm:p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 shadow-inner transition-colors duration-300`}
-            >
-              {/* Route Input Group + Dedicated Invert Button */}
-              <div className="flex items-center gap-2 sm:gap-2.5">
-                {/* Inputs Column */}
-                <div className="flex-1 flex flex-col gap-2 min-w-0">
-                  {/* Boarding Station Field */}
-                  <div
-                    className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors`}
-                  >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{
-                        backgroundColor: currentTheme.accentPrimary,
-                        boxShadow: `0 0 0 4px ${currentTheme.accentPrimary}33`,
-                      }}
-                    />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-sans text-[10px] text-slate-400 uppercase tracking-wider font-bold">
-                        BOARDING FROM
-                      </span>
-                      <select
-                        value={currentStation?.id || ''}
-                        onChange={(e) => {
-                          const selected = stations.find((s) => s.id === e.target.value);
-                          if (selected) handleSelectStation(selected);
-                        }}
-                        className="w-full bg-transparent text-white font-sans text-sm sm:text-base font-bold focus:outline-none cursor-pointer truncate pt-0.5 tracking-tight"
-                      >
-                        {stations.map((st) => (
-                          <option key={st.id} value={st.id} className="bg-[#0E1626] text-white">
-                            {st.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Destination Station Field */}
-                  <div
-                    className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl ${currentTheme.inputBg} border ${currentTheme.inputBorder} ${currentTheme.inputFocus} transition-colors`}
-                  >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{
-                        backgroundColor: '#E11D48',
-                        boxShadow: '0 0 0 4px rgba(225,29,72,0.25)',
-                      }}
-                    />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-sans text-[10px] text-slate-400 uppercase tracking-wider font-bold">
-                          DESTINATION
-                        </span>
-                        {destinationStation && (
-                          <button
-                            onClick={handleClearDestination}
-                            className="text-[11px] text-rose-400 hover:text-rose-300 font-sans font-bold transition-colors mr-0.5"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </div>
-                      <select
-                        value={destinationStation?.id || ''}
-                        onChange={(e) => {
-                          if (!e.target.value) {
-                            setDestinationStation(null);
-                          } else {
-                            const selected = stations.find((s) => s.id === e.target.value);
-                            if (selected) setDestinationStation(selected);
-                          }
-                        }}
-                        className="w-full bg-transparent text-white font-sans text-sm sm:text-base font-bold focus:outline-none cursor-pointer truncate pt-0.5 tracking-tight"
-                      >
-                        <option value="" className="bg-[#0E1626] text-slate-400">
-                          Select destination...
-                        </option>
-                        {stations
-                          .filter((st) => normalizeStationId(st.id) !== normalizeStationId(currentStation?.id))
-                          .map((st) => (
-                            <option key={st.id} value={st.id} className="bg-[#0E1626] text-white">
-                              {st.name}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dedicated Invert/Swap Stations Button (Centered, Zero Overlap) */}
-                <div className="shrink-0 flex items-center justify-center">
+            {/* Depart Later Quick Action */}
+            {!selectedTime ? (
+              !isTimePickerOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setIsTimePickerOpen(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-sky-400 hover:text-sky-300 transition-colors py-1 px-2 rounded-lg bg-sky-500/10 border border-sky-500/20 active:scale-95"
+                >
+                  <Clock size={12} strokeWidth={2.2} />
+                  <span>Depart later</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-[#0B0F19] p-1.5 rounded-xl border border-white/15">
+                  <input
+                    type="time"
+                    value={customTimeInput}
+                    onChange={(e) => setCustomTimeInput(e.target.value)}
+                    className="bg-transparent text-white border border-white/10 rounded px-1.5 py-0.5 text-xs font-mono font-bold focus:outline-none focus:border-sky-400"
+                  />
                   <button
-                    onClick={handleSwapStations}
-                    disabled={!destinationStation}
-                    title="Swap Boarding & Destination"
-                    aria-label="Swap Stations"
-                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl border flex items-center justify-center shadow-lg transition-all ${currentTheme.swapBtn} disabled:opacity-20 disabled:cursor-not-allowed hover:scale-105 active:scale-95`}
+                    type="button"
+                    onClick={handleApplyCustomTime}
+                    className="px-2 py-0.5 rounded text-xs font-sans font-bold bg-sky-500 text-white hover:bg-sky-400 transition-colors"
                   >
-                    <ArrowUpDown size={16} strokeWidth={2.2} />
+                    Set
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsTimePickerOpen(false)}
+                    className="p-0.5 text-slate-400 hover:text-white"
+                  >
+                    <X size={12} />
                   </button>
                 </div>
+              )
+            ) : (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-xs font-sans text-sky-300">
+                <Clock size={12} />
+                <span>After <strong>{formatTime12h(selectedTime)}</strong></span>
+                <button
+                  type="button"
+                  onClick={handleResetToNow}
+                  className="ml-1 text-slate-400 hover:text-white"
+                  title="Reset to Live"
+                >
+                  <X size={12} />
+                </button>
               </div>
+            )}
+          </div>
 
-              {/* Departure Time Control (Subtle UX - Leave Now is silent default) */}
-              <div className="pt-2 border-t border-white/5 font-sans text-xs">
-                {!selectedTime ? (
-                  !isTimePickerOpen ? (
-                    <button
-                      type="button"
-                      onClick={() => setIsTimePickerOpen(true)}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors py-0.5 px-1 rounded active:scale-95"
-                    >
-                      <Clock size={13} strokeWidth={2} className="text-slate-400" />
-                      <span>Depart later?</span>
-                    </button>
-                  ) : (
-                    <div className="flex items-center justify-between gap-2 bg-[#0E1626] p-2 rounded-xl border border-white/10">
-                      <div className="flex items-center gap-2">
-                        <Clock size={12} strokeWidth={2} className="text-cyan-400 shrink-0" />
-                        <span className="text-[10px] font-sans text-slate-400 uppercase tracking-wider font-bold">Depart at:</span>
-                        <input
-                          type="time"
-                          value={customTimeInput}
-                          onChange={(e) => setCustomTimeInput(e.target.value)}
-                          className="bg-black/40 text-white border border-white/15 rounded-lg px-2 py-0.5 text-xs font-mono font-bold focus:outline-none focus:border-cyan-500"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={handleApplyCustomTime}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-sans font-bold transition-colors ${currentTheme.timeButton}`}
-                        >
-                          Check
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsTimePickerOpen(false)}
-                          className="p-1 text-slate-400 hover:text-white transition-colors"
-                          title="Cancel"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <div
-                    className="flex items-center justify-between border px-3 py-1.5 rounded-xl"
-                    style={{
-                      backgroundColor: `${currentTheme.accentPrimary}15`,
-                      borderColor: `${currentTheme.accentPrimary}40`,
-                    }}
-                  >
-                    <div
-                      className="flex items-center gap-2 text-xs font-sans font-semibold"
-                      style={{ color: currentTheme.accentPrimary }}
-                    >
-                      <Clock size={12} />
-                      <span>Departing after <strong className="font-mono font-bold">{formatTime12h(selectedTime)}</strong></span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleResetToNow}
-                      className="flex items-center gap-1 text-[11px] font-sans font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded border border-white/10 transition-colors"
-                      title="Reset to current time"
-                    >
-                      <span>Live</span>
-                      <X size={11} />
-                    </button>
-                  </div>
-                )}
+          {/* Drawer Body Scroll Area */}
+          <div className="overflow-y-auto flex flex-col gap-3 pr-1 pb-1 overscroll-contain">
+            {/* Off-Hours Service Closed Alert */}
+            {!isOpen && (
+              <div className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs">
+                <Moon size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-sans font-bold text-amber-300">Service Closed for the Night</span>
+                  <span className="text-slate-300 text-[11px] leading-relaxed">
+                    Kochi Metro trains have concluded operations for today. Tomorrow's morning services commence at{' '}
+                    <strong className="text-white font-semibold">{opensAt || '06:00 AM'} IST</strong>.
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* ========================================================================= */}
-            {/* STATE A: Destination Selected (First Train + Next 3 Upcoming Metros)      */}
-            {/* Accordion / Drawer style: Selected train expands, others collapse         */}
-            {/* ========================================================================= */}
+            {/* Upcoming Departures Header */}
             {destinationStation && tripPlan && (
-              <div className="flex flex-col gap-2.5">
-                {!isOpen && (
-                  <div className="p-3 rounded-xl border border-amber-500/25 bg-amber-500/10 flex items-start gap-2.5 text-xs">
-                    <Moon size={15} className="text-amber-400 shrink-0 mt-0.5" />
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-sans font-bold text-amber-300">Service Closed for the Night</span>
-                      <span className="text-slate-300 text-[11px] leading-relaxed">
-                        Kochi Metro trains have stopped for today. Next morning departures resume at{' '}
-                        <strong className="text-white font-semibold">{opensAt || '06:00 AM'} IST</strong>:
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {tripPlan.journeyTrains && tripPlan.journeyTrains.length > 0 ? (
-                  <>
-                    <div className="flex items-center justify-between px-1">
-                      <span className="font-sans text-[11px] text-slate-300 uppercase tracking-wider font-extrabold">
-                        {tripPlan.isCustomTime ? 'SCHEDULED DEPARTURES' : isOpen ? 'AVAILABLE TRAINS' : 'MORNING DEPARTURES'}
-                      </span>
-                      <span className="font-sans text-[11px] text-slate-400 font-medium">
-                        {isOpen ? 'Select train to track' : `First train at ${opensAt || '06:00 AM'}`}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      {tripPlan.journeyTrains.map((train, idx) => {
-                        const isSelected = selectedTrainIdx === idx;
-
-                        if (isSelected) {
-                          // Expanded Drawer Card
-                          return (
-                            <motion.div
-                              key={train.id || idx}
-                              layout
-                              initial={{ opacity: 0.85, scale: 0.98 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.18 }}
-                              className={`p-4 rounded-2xl border ${currentTheme.expandedTrainBorder} ${currentTheme.expandedTrainBg} flex flex-col gap-3 ${currentTheme.expandedTrainShadow} transition-colors duration-300`}
-                            >
-                              {/* Header Row */}
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="w-2.5 h-2.5 rounded-full ring-4 animate-pulse"
-                                    style={{
-                                      backgroundColor: currentTheme.accentPrimary,
-                                      boxShadow: `0 0 0 4px ${currentTheme.accentPrimary}33`,
-                                    }}
-                                  />
-                                  <span className="font-sans text-sm sm:text-base font-extrabold text-white tracking-tight">
-                                    TRAIN {train.displayId}
-                                  </span>
-                                  <span
-                                    className={`font-sans text-[10px] uppercase px-2 py-0.5 rounded ${currentTheme.activeBadgeBg} border ${currentTheme.activeBadgeBorder} ${currentTheme.activeBadgeText} font-bold tracking-wider`}
-                                  >
-                                    {idx === 0
-                                      ? tripPlan.isCustomTime
-                                        ? 'EARLIEST TRAIN'
-                                        : 'READILY AVAILABLE'
-                                      : 'SELECTED TRAIN'}
-                                  </span>
-                                </div>
-
-                                <span
-                                  className="font-mono text-xs sm:text-sm font-bold tabular-nums"
-                                  style={{ color: currentTheme.accentPrimary }}
-                                >
-                                  {train.departureDisplay}
-                                </span>
-                              </div>
-
-                              {/* Live/Scheduled Status */}
-                              <div
-                                className={`text-xs font-sans text-slate-300 pl-3 border-l-2 ${currentTheme.statusBorder}`}
-                              >
-                                Status: <span className="text-white font-semibold">{train.status}</span>
-                              </div>
-
-                              {/* Single Non-Redundant Journey Summary Bar */}
-                              <div className="p-2.5 sm:p-3 rounded-xl bg-[#0B0F19]/90 border border-white/10 flex items-center justify-between font-sans text-[11px] sm:text-xs shadow-sm">
-                                <span className="text-slate-200 font-semibold">
-                                  {train.rideMinutes || tripPlan.rideMinutes} mins • {tripPlan.hops} stops
-                                </span>
-                                <span className="text-slate-600">•</span>
-                                <span
-                                  className="font-mono font-bold"
-                                  style={{
-                                    color:
-                                      currentTheme.accentSecondary === '#FFFFFF'
-                                        ? currentTheme.accentTertiary
-                                        : currentTheme.accentSecondary,
-                                  }}
-                                >
-                                  Fare ₹{tripPlan.fare}
-                                </span>
-                                <span className="text-slate-600">•</span>
-                                <span className="text-slate-200 font-semibold">
-                                  Reaching <strong className="font-mono font-bold text-white">{train.arrTime || '--:--'}</strong>
-                                </span>
-                              </div>
-                            </motion.div>
-                          );
-                        }
-
-                        // Collapsed Accordion Row
-                        return (
-                          <motion.div
-                            key={train.id || idx}
-                            layout
-                            onClick={() => setSelectedTrainIdx(idx)}
-                            className={`p-3 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-sans text-xs text-slate-300 cursor-pointer transition-all group`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div
-                                className="w-1.5 h-1.5 rounded-full transition-colors shrink-0"
-                                style={{ backgroundColor: currentTheme.accentPrimary }}
-                              />
-                              <span className="font-bold text-white shrink-0 tracking-tight">
-                                Train {train.displayId}
-                              </span>
-                              <span className="text-slate-600">•</span>
-                              <span className="text-slate-400 text-[11px] font-medium truncate">
-                                {train.status}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0 ml-2">
-                              <span className="text-slate-200 font-mono font-bold text-[11px] tabular-nums">
-                                {train.departureDisplay}
-                              </span>
-                              <ChevronDown size={14} className="text-slate-500 group-hover:text-white transition-colors" />
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-6 rounded-2xl border border-white/10 bg-[#0B0F19]/80 text-center font-sans text-xs font-medium text-slate-400">
-                    {isLoadingSchedule ? 'Checking metro schedules...' : 'No upcoming trains found for this route.'}
-                  </div>
-                )}
+              <div className="flex items-center justify-between px-1 pt-1">
+                <span className="font-sans text-[11px] text-slate-400 uppercase tracking-wider font-extrabold">
+                  {tripPlan.isCustomTime ? 'SCHEDULED DEPARTURES' : isOpen ? 'UPCOMING DEPARTURES' : 'MORNING DEPARTURES'}
+                </span>
+                <span className="font-sans text-[11px] text-slate-400 font-medium">
+                  {tripPlan.journeyTrains?.length || 0} options available
+                </span>
               </div>
             )}
 
             {/* ========================================================================= */}
-            {/* STATE B: Only Boarding Station Selected (General Station Departures)       */}
+            {/* STATE A: Destination Selected (Upcoming Clean Train Cards)                */}
+            {/* ========================================================================= */}
+            {destinationStation && tripPlan && tripPlan.journeyTrains && tripPlan.journeyTrains.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {tripPlan.journeyTrains.map((train, idx) => {
+                  const isSelected = selectedTrainIdx === idx;
+                  const isNorth = train.direction === 1;
+                  const dotColor = isNorth ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]';
+
+                  return (
+                    <motion.div
+                      key={train.id || idx}
+                      layout
+                      onClick={() => setSelectedTrainIdx(isSelected ? -1 : idx)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-sky-500/10 border-sky-400/40 shadow-[0_4px_20px_rgba(14,165,233,0.15)]'
+                          : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/10'
+                      }`}
+                    >
+                      {/* Top Row: Train ID + Departure Countdown/Time */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                          <span className="font-sans text-sm font-extrabold text-white tracking-tight">
+                            KMRL-{train.displayId}
+                          </span>
+                          {idx === 0 && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                              Next
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-bold text-sky-400 tabular-nums">
+                            {train.departureDisplay || train.depTime}
+                          </span>
+                          <ChevronDown
+                            size={14}
+                            className={`text-slate-400 transition-transform duration-200 ${
+                              isSelected ? 'rotate-180 text-white' : ''
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Second Row: Ride Duration + Arrival Estimate */}
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-[11px] text-slate-400 font-sans">
+                        <span>Ride: <strong className="text-slate-200">{train.rideMinutes || tripPlan.rideMinutes} mins</strong></span>
+                        <span>Arrival: <strong className="text-white font-mono">{train.arrTime || '--:--'}</strong></span>
+                      </div>
+
+                      {/* Expandable Journey Timeline & Telemetry */}
+                      <AnimatePresence>
+                        {isSelected && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden mt-3 pt-3 border-t border-white/10 flex flex-col gap-2"
+                          >
+                            <div className="text-xs font-sans text-slate-300 flex items-center justify-between">
+                              <span>Status: <strong className="text-white">{train.status}</strong></span>
+                              <span className="font-mono text-[11px] text-slate-400">
+                                {train.waitEtaSeconds ? `ETA in ~${Math.ceil(train.waitEtaSeconds / 60)} mins` : ''}
+                              </span>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between text-[11px] font-sans">
+                              <span className="text-slate-300">
+                                <strong>{currentStation.name}</strong> ➔ <strong>{destinationStation.name}</strong>
+                              </span>
+                              <span className="text-rose-400 font-mono font-bold">₹{tripPlan.fare}</span>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : destinationStation ? (
+              <div className="p-6 rounded-2xl border border-white/10 bg-[#0B0F19]/80 text-center font-sans text-xs font-medium text-slate-400">
+                {isLoadingSchedule ? 'Checking metro schedules...' : 'No upcoming trains found for this route.'}
+              </div>
+            ) : null}
+
+            {/* ========================================================================= */}
+            {/* STATE B: Only Boarding Station Selected (General Platform Departures)      */}
             {/* ========================================================================= */}
             {!destinationStation && (
-              <div className="flex flex-col gap-3">
-                {/* Towards Aluva */}
-                {!isTerminalNorth && (
-                  <div
-                    className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 transition-colors duration-300`}
-                  >
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <span className="font-sans text-sm font-bold text-white tracking-tight">
+              <div className="flex flex-col gap-2.5">
+                {/* Platform 1 Towards Aluva */}
+                {currentStation && normalizeStationId(currentStation.id) !== 'ALVA' && (
+                  <div className="p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                      <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
                         Towards Aluva
                       </span>
-                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
                         Platform 1
                       </span>
                     </div>
 
                     {liveStationArrivals.north.length > 0 ? (
-                      <div className="flex flex-col gap-2">
-                        {liveStationArrivals.north.slice(0, 3).map((arr, idx) => (
+                      <div className="flex flex-col gap-1.5">
+                        {liveStationArrivals.north.slice(0, 3).map((arr) => (
                           <div
                             key={arr.train.id}
-                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-sans text-xs text-slate-300 transition-colors`}
+                            className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white tracking-tight">
-                                Train {arr.train.id.replace('KMRL-', '')}
-                              </span>
-                              <span className="text-slate-600">•</span>
-                              <span className="text-slate-400 text-[11px] font-medium truncate max-w-[170px]">
-                                {arr.currentLocation}
-                              </span>
-                            </div>
-
-                            <span
-                              className="font-mono font-bold text-xs tabular-nums"
-                              style={{ color: idx === 0 ? currentTheme.accentPrimary : '#94A3B8' }}
-                            >
-                              {arr.etaSeconds <= 0
-                                ? 'Arriving now'
-                                : `in ${Math.floor(arr.etaSeconds / 60)}m ${arr.etaSeconds % 60}s`}
+                            <span className="font-bold text-white">
+                              KMRL-{arr.train.id.replace('KMRL-', '')}
+                            </span>
+                            <span className="font-mono text-emerald-400 font-bold">
+                              {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
                             </span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="font-sans text-xs font-medium py-3 text-center flex flex-col items-center gap-1">
-                        {!isOpen ? (
-                          <>
-                            <span className="text-amber-300/90 font-semibold">Service Closed for the Night</span>
-                            <span className="text-slate-400 text-[11px]">First northbound train departs at {opensAt || '06:00 AM'} IST</span>
-                          </>
-                        ) : (
-                          <span className="text-slate-500">No trains currently approaching</span>
-                        )}
-                      </div>
+                      <span className="text-[11px] text-slate-500 py-1 text-center">
+                        {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                      </span>
                     )}
                   </div>
                 )}
 
-                {/* Towards Thripunithura */}
-                {!isTerminalSouth && (
-                  <div
-                    className={`p-4 rounded-2xl border ${currentTheme.cardBorder} ${currentTheme.cardBg} flex flex-col gap-2.5 transition-colors duration-300`}
-                  >
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <span className="font-sans text-sm font-bold text-white tracking-tight">
+                {/* Platform 2 Towards Thripunithura */}
+                {currentStation && normalizeStationId(currentStation.id) !== 'TPHT' && (
+                  <div className="p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-2">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                      <span className="font-sans text-xs sm:text-sm font-bold text-white tracking-tight">
                         Towards Thripunithura
                       </span>
-                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      <span className="font-sans text-[10px] text-slate-400 font-bold uppercase">
                         Platform 2
                       </span>
                     </div>
 
                     {liveStationArrivals.south.length > 0 ? (
-                      <div className="flex flex-col gap-2">
-                        {liveStationArrivals.south.slice(0, 3).map((arr, idx) => (
+                      <div className="flex flex-col gap-1.5">
+                        {liveStationArrivals.south.slice(0, 3).map((arr) => (
                           <div
                             key={arr.train.id}
-                            className={`p-2.5 rounded-xl border border-white/5 bg-white/[0.02] ${currentTheme.hoverRow} flex items-center justify-between font-sans text-xs text-slate-300 transition-colors`}
+                            className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs"
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white tracking-tight">
-                                Train {arr.train.id.replace('KMRL-', '')}
-                              </span>
-                              <span className="text-slate-600">•</span>
-                              <span className="text-slate-400 text-[11px] font-medium truncate max-w-[170px]">
-                                {arr.currentLocation}
-                              </span>
-                            </div>
-
-                            <span
-                              className="font-mono font-bold text-xs tabular-nums"
-                              style={{ color: idx === 0 ? currentTheme.accentPrimary : '#94A3B8' }}
-                            >
-                              {arr.etaSeconds <= 0
-                                ? 'Arriving now'
-                                : `in ${Math.floor(arr.etaSeconds / 60)}m ${arr.etaSeconds % 60}s`}
+                            <span className="font-bold text-white">
+                              KMRL-{arr.train.id.replace('KMRL-', '')}
+                            </span>
+                            <span className="font-mono text-amber-400 font-bold">
+                              {arr.etaSeconds <= 0 ? 'Arriving now' : `in ${Math.floor(arr.etaSeconds / 60)}m`}
                             </span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="font-sans text-xs font-medium py-3 text-center flex flex-col items-center gap-1">
-                        {!isOpen ? (
-                          <>
-                            <span className="text-amber-300/90 font-semibold">Service Closed for the Night</span>
-                            <span className="text-slate-400 text-[11px]">First southbound train departs at {opensAt || '06:00 AM'} IST</span>
-                          </>
-                        ) : (
-                          <span className="text-slate-500">No trains currently approaching</span>
-                        )}
-                      </div>
+                      <span className="text-[11px] text-slate-500 py-1 text-center">
+                        {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                      </span>
                     )}
                   </div>
                 )}
@@ -988,6 +771,24 @@ export function NetworkView() {
           </div>
         </div>
       </motion.div>
+
+      {/* Interactive Station Picker Search Modal */}
+      <StationPickerModal
+        isOpen={stationPickerMode !== null}
+        onClose={() => setStationPickerMode(null)}
+        mode={stationPickerMode || 'origin'}
+        stations={stations}
+        activeStation={currentStation}
+        destinationStation={destinationStation}
+        onSelectStation={(st, isDestination) => {
+          if (isDestination) {
+            setDestinationStation(st);
+          } else {
+            handleSelectStation(st);
+          }
+        }}
+        theme={currentTheme}
+      />
     </div>
   );
 }
