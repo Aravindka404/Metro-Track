@@ -546,22 +546,9 @@ export function NetworkView() {
           </span>
         </div>
 
-        {/* Live Network Status Badge + Recenter Action + Theme Toggle */}
+        {/* Recenter Action + Theme Toggle (Live badge removed) */}
         <div className="flex items-center gap-2 pointer-events-auto">
-          {isOpen ? (
-            <div
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border backdrop-blur-xl flex items-center gap-2 shadow-md transition-colors ${
-                isLight
-                  ? 'border-slate-200 bg-white/95 text-slate-900'
-                  : 'border-white/15 bg-[#0E1626]/90 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
-              <span className={`font-sans text-xs font-extrabold tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                LIVE
-              </span>
-            </div>
-          ) : (
+          {!isOpen && (
             <div
               className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl border backdrop-blur-xl flex items-center gap-2 shadow-md transition-colors ${
                 isLight
