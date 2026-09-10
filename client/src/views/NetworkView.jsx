@@ -816,15 +816,14 @@ export function NetworkView() {
                 </span>
               </div>
 
-              {/* Single clean subtitle row with zero redundancy */}
+              {/* Clean subtitle row: Arrival ETA and Live Telemetry Status */}
               <div
                 className={`flex items-center justify-between text-xs font-sans pt-1 border-t ${
                   isLight ? 'border-teal-200/60 text-slate-600' : 'border-white/10 text-slate-300'
                 }`}
               >
-                <span>Ride: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white'}>{firstTrain.rideMinutes} mins</strong></span>
                 <span>Arrival: <strong className={`font-mono ${isLight ? 'text-slate-900 font-bold' : 'text-white'}`}>{firstTrain.arrTime || '--:--'}</strong></span>
-                <span className={`text-[11px] truncate max-w-[120px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{firstTrain.status}</span>
+                <span className={`text-[11px] truncate max-w-[180px] sm:max-w-[200px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{firstTrain.status}</span>
               </div>
             </div>
           )}
@@ -948,9 +947,8 @@ export function NetworkView() {
                               isLight ? 'border-slate-200/70 text-slate-500' : 'border-white/5 text-slate-400'
                             }`}
                           >
-                            <span>Ride: <strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>{train.rideMinutes} mins</strong></span>
                             <span>Arrival: <strong className={`font-mono ${isLight ? 'text-slate-900' : 'text-white'}`}>{train.arrTime || '--:--'}</strong></span>
-                            <span className={`truncate max-w-[120px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{train.status}</span>
+                            <span className={`truncate max-w-[180px] sm:max-w-[200px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{train.status}</span>
                           </div>
                         </div>
                       );
