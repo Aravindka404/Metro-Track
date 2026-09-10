@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Clock, X, Moon, Sun, Compass } from 'lucide-react';
 import { BuyMeACoffeeIcon } from '../components/BuyMeACoffeeIcon.jsx';
+import { TrainJourneyCard } from '../components/TrainJourneyCard.jsx';
 import { MapBase } from '../components/MapBase.jsx';
 import { StationPills } from '../components/StationPills.jsx';
 import { StationPickerModal } from '../components/StationPickerModal.jsx';
@@ -136,7 +137,7 @@ export function NetworkView() {
   const mapPadding = useMemo(() => {
     if (isMobile) {
       return {
-        bottom: isDrawerExpanded ? Math.round(window.innerHeight * 0.52) : 250,
+        bottom: isDrawerExpanded ? Math.round(window.innerHeight * 0.52) : (destinationStation ? 260 : 160),
         top: 80,
         left: 20,
         right: 20,
@@ -148,7 +149,7 @@ export function NetworkView() {
       left: 480,
       right: 40,
     };
-  }, [isMobile, isDrawerExpanded]);
+  }, [isMobile, isDrawerExpanded, destinationStation]);
 
   const [viewState, setViewState] = useState({
     longitude: 76.315,
@@ -353,8 +354,8 @@ export function NetworkView() {
           : rideMinutes;
 
       const depDisplay =
-        waitSec <= 0
-          ? 'Arriving now'
+        waitSec <= 45
+          ? 'Arriving Now'
           : Math.floor(waitSec / 60) === 0
           ? `in ${waitSec}s`
           : `in ${Math.floor(waitSec / 60)}m ${waitSec % 60}s`;
@@ -482,6 +483,7 @@ export function NetworkView() {
 
   const firstTrain = tripPlan?.journeyTrains?.[0];
   const subsequentTrains = tripPlan?.journeyTrains?.slice(1) || [];
+
 
   return (
     <div
@@ -619,22 +621,16 @@ export function NetworkView() {
       {/* Floating Commuter Drawer / Mobile Bottom Sheet */}
       <motion.div
         drag={isMobile ? 'y' : false}
-        dragConstraints={{ top: 0, bottom: 250 }}
+        dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.15}
         onDragEnd={(e, info) => {
-          if (info.offset.y > 60) {
+          if (info.offset.y > 40) {
             setIsDrawerExpanded(false);
-          } else if (info.offset.y < -60) {
+          } else if (info.offset.y < -40) {
             setIsDrawerExpanded(true);
           }
         }}
-        animate={{
-          y: isMobile
-            ? isDrawerExpanded
-              ? 0
-              : 'calc(100% - 240px)'
-            : 0,
-        }}
+        animate={{ y: 0 }}
         transition={{ type: 'spring', damping: 26, stiffness: 220 }}
         className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[440px] z-30 pointer-events-auto overscroll-y-contain"
       >
@@ -769,63 +765,15 @@ export function NetworkView() {
             )}
           </div>
 
-          {/* FIRST TRAIN CARD - ALWAYS VISIBLE IN MINIMIZED AND EXPANDED MODES */}
+          {/* PRIMARY TRAIN PILL (FIRST TRAIN) */}
           {destinationStation && firstTrain && (
-            <div
-              onClick={() => firstTrain.id && navigate(`/train/${firstTrain.id}`)}
-              className={`p-3.5 rounded-2xl border flex flex-col gap-1.5 cursor-pointer transition-all active:scale-[0.99] ${
-                isLight
-                  ? 'border-teal-500/30 bg-teal-50/80 shadow-[0_4px_16px_rgba(15,118,110,0.08)] hover:bg-teal-100/70 hover:border-teal-500/50'
-                  : 'border-sky-400/40 bg-sky-500/10 shadow-[0_4px_16px_rgba(14,165,233,0.12)] hover:bg-sky-500/15 hover:border-sky-400/70'
-              }`}
-              title={`Track Train KMRL-${firstTrain.displayId} Live`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${
-                      firstTrain.direction === 1
-                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
-                        : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
-                    }`}
-                  />
-                  <span
-                    className={`font-sans text-sm font-extrabold tracking-tight ${
-                      isLight ? 'text-slate-900' : 'text-white'
-                    }`}
-                  >
-                    KMRL-{firstTrain.displayId}
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                      isLight
-                        ? 'bg-teal-100 text-teal-800 border-teal-300'
-                        : 'bg-sky-500/20 text-sky-300 border-sky-400/30'
-                    }`}
-                  >
-                    FIRST TRAIN
-                  </span>
-                </div>
-
-                <span
-                  className={`font-mono text-sm sm:text-base font-extrabold tabular-nums ${
-                    isLight ? 'text-teal-700' : 'text-sky-400'
-                  }`}
-                >
-                  {firstTrain.departureDisplay || firstTrain.depTime}
-                </span>
-              </div>
-
-              {/* Clean subtitle row: Arrival ETA and Live Telemetry Status */}
-              <div
-                className={`flex items-center justify-between text-xs font-sans pt-1 border-t ${
-                  isLight ? 'border-teal-200/60 text-slate-600' : 'border-white/10 text-slate-300'
-                }`}
-              >
-                <span>Arrival: <strong className={`font-mono ${isLight ? 'text-slate-900 font-bold' : 'text-white'}`}>{firstTrain.arrTime || '--:--'}</strong></span>
-                <span className={`text-[11px] truncate max-w-[180px] sm:max-w-[200px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{firstTrain.status}</span>
-              </div>
-            </div>
+            <TrainJourneyCard
+              train={firstTrain}
+              liveTrainData={trains.find((t) => t.id === firstTrain.id)}
+              isPrimary={true}
+              isLight={isLight}
+              onSelect={() => firstTrain.id && navigate(`/train/${firstTrain.id}`)}
+            />
           )}
 
           {/* Toggle Button in Minimized Mode to reveal upcoming trains */}
@@ -904,55 +852,16 @@ export function NetworkView() {
                 {/* Subsequent Trains Cards */}
                 {destinationStation && subsequentTrains.length > 0 ? (
                   <div className="flex flex-col gap-2">
-                    {subsequentTrains.map((train, idx) => {
-                      const isNorth = train.direction === 1;
-                      const dotColor = isNorth
-                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
-                        : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]';
-
-                      return (
-                        <div
-                          key={train.id || idx}
-                          onClick={() => train.id && navigate(`/train/${train.id}`)}
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
-                            isLight
-                              ? 'border-slate-200 bg-slate-50/70 hover:bg-slate-100/90 hover:border-slate-300 text-slate-900 shadow-sm'
-                              : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.07] hover:border-white/20 text-white'
-                          }`}
-                          title={`Track Train KMRL-${train.displayId} Live`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                              <span
-                                className={`font-sans text-sm font-extrabold tracking-tight ${
-                                  isLight ? 'text-slate-900' : 'text-white'
-                                }`}
-                              >
-                                KMRL-{train.displayId}
-                              </span>
-                            </div>
-
-                            <span
-                              className={`font-mono text-sm font-bold tabular-nums ${
-                                isLight ? 'text-teal-700' : 'text-sky-400'
-                              }`}
-                            >
-                              {train.departureDisplay || train.depTime}
-                            </span>
-                          </div>
-
-                          <div
-                            className={`flex items-center justify-between mt-2 pt-2 border-t text-[11px] font-sans ${
-                              isLight ? 'border-slate-200/70 text-slate-500' : 'border-white/5 text-slate-400'
-                            }`}
-                          >
-                            <span>Arrival: <strong className={`font-mono ${isLight ? 'text-slate-900' : 'text-white'}`}>{train.arrTime || '--:--'}</strong></span>
-                            <span className={`truncate max-w-[180px] sm:max-w-[200px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{train.status}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {subsequentTrains.slice(0, 3).map((train, idx) => (
+                      <TrainJourneyCard
+                        key={train.id || idx}
+                        train={train}
+                        liveTrainData={trains.find((t) => t.id === train.id)}
+                        isPrimary={false}
+                        isLight={isLight}
+                        onSelect={() => train.id && navigate(`/train/${train.id}`)}
+                      />
+                    ))}
                   </div>
                 ) : destinationStation && !firstTrain ? (
                   <div
