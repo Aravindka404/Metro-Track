@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Clock, X, Moon, Sun, Compass } from 'lucide-react';
+import { BuyMeACoffeeIcon } from '../components/BuyMeACoffeeIcon.jsx';
 import { MapBase } from '../components/MapBase.jsx';
 import { StationPills } from '../components/StationPills.jsx';
 import { StationPickerModal } from '../components/StationPickerModal.jsx';
@@ -14,6 +15,9 @@ import {
   normalizeStationId,
 } from '../utils/fareCalculator.js';
 import { THEMES, getStoredTheme, saveTheme } from '../utils/themeConfig.js';
+
+// Buy Me a Coffee Support URL (Update with your custom link/handle)
+const BUY_ME_A_COFFEE_URL = 'https://buymeacoffee.com/aravindka';
 
 // Precision Haversine algorithm for nearest station detection
 function getNearestStation(userLat, userLon, stations) {
@@ -563,6 +567,27 @@ export function NetworkView() {
             </div>
           )}
 
+          {/* Buy Me a Coffee Support Button (Responsive: Icon on Mobile, Pill on Desktop) */}
+          <a
+            href={BUY_ME_A_COFFEE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`w-9 h-9 sm:w-auto sm:h-10 px-0 sm:px-3.5 rounded-full border backdrop-blur-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all group ${
+              isLight
+                ? 'border-amber-200/90 bg-amber-50/90 hover:bg-amber-100 text-amber-900 shadow-sm'
+                : 'border-amber-500/30 bg-[#1A150A]/85 hover:bg-[#251D0C] text-amber-300 shadow-[0_4px_20px_rgba(245,158,11,0.15)]'
+            }`}
+            title="Support Kochi Metro Radar on Buy Me a Coffee"
+          >
+            <BuyMeACoffeeIcon
+              className="w-[18px] h-[22px] group-hover:scale-110 group-hover:rotate-6 transition-transform duration-200 shrink-0"
+              outlineColor={isLight ? '#0D0C22' : '#FFFFFF'}
+            />
+            <span className="hidden sm:inline font-sans text-xs font-bold tracking-tight">
+              Buy me a coffee
+            </span>
+          </a>
+
           {/* Recenter Map Button */}
           <button
             onClick={handleRecenterCorridor}
@@ -1070,6 +1095,7 @@ export function NetworkView() {
               </motion.div>
             )}
           </AnimatePresence>
+
         </div>
       </motion.div>
 
