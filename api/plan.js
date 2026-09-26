@@ -1,20 +1,29 @@
 import { GTFSEngine } from '../server/gtfsEngine.js';
+import { BangaloreEngine } from '../server/bangaloreEngine.js';
 
-let cachedEngine = null;
+let cachedKochiEngine = null;
+let cachedBangaloreEngine = null;
 
-function getEngine() {
-  if (!cachedEngine) {
-    cachedEngine = new GTFSEngine();
-    cachedEngine.load();
+function getKochiEngine() {
+  if (!cachedKochiEngine) {
+    cachedKochiEngine = new GTFSEngine();
+    cachedKochiEngine.load();
   }
-  return cachedEngine;
+  return cachedKochiEngine;
+}
+
+function getBangaloreEngine() {
+  if (!cachedBangaloreEngine) {
+    cachedBangaloreEngine = new BangaloreEngine();
+    cachedBangaloreEngine.load();
+  }
+  return cachedBangaloreEngine;
 }
 
 export default function handler(req, res) {
   try {
-    const { origin, destination, time } = req.query || {};
-    const engine = getEngine();
-    const departures = engine.getScheduledDepartures(origin, destination, time, 4);
+    const { origin, destination, time, city } = req.query || {};
+    const currentCity = (city || 'kochi').toLowerCase();
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -24,9 +33,24 @@ export default function handler(req, res) {
       return res.status(200).end();
     }
 
+    if (currentCity === 'bengaluru' || currentCity === 'bangalore') {
+      const engine = getBangaloreEngine();
+      const departures = engine.getScheduledDepartures(origin, destination, time, 4);
+      return res.status(200).json({
+        origin,
+        destination,
+        city: 'bengaluru',
+        queryTime: time || 'now',
+        departures,
+      });
+    }
+
+    const engine = getKochiEngine();
+    const departures = engine.getScheduledDepartures(origin, destination, time, 4);
     return res.status(200).json({
       origin,
       destination,
+      city: 'kochi',
       queryTime: time || 'now',
       departures,
     });
@@ -38,3 +62,4 @@ export default function handler(req, res) {
     });
   }
 }
+

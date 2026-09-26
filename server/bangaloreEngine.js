@@ -4,7 +4,24 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.resolve(__dirname, '../data/bengaluru');
+
+export function findBangaloreDir() {
+  const candidates = [
+    path.resolve(__dirname, '../data/bengaluru'),
+    path.resolve(process.cwd(), 'data/bengaluru'),
+    path.resolve(process.cwd(), '../data/bengaluru'),
+    path.resolve(__dirname, '../../data/bengaluru'),
+    path.resolve(__dirname, 'data/bengaluru'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'stations.geojson'))) {
+      return candidate;
+    }
+  }
+  return path.resolve(__dirname, '../data/bengaluru');
+}
+
+let DATA_DIR = findBangaloreDir();
 
 function toRad(deg) {
   return (deg * Math.PI) / 180;

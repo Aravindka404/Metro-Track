@@ -3,7 +3,7 @@ export const CITIES = {
     id: 'kochi',
     name: 'Kochi Metro',
     subname: 'KMRL',
-    headerTitle: 'KOCHI METRO RADAR',
+    headerTitle: 'Kochi Metro',
     agency: 'KMRL',
     color: '#06B6D4',
     center: {
@@ -24,9 +24,9 @@ export const CITIES = {
   },
   bengaluru: {
     id: 'bengaluru',
-    name: 'Bengaluru Metro',
+    name: 'Banglore Metro',
     subname: 'Namma Metro (BMRCL)',
-    headerTitle: 'NAMMA METRO RADAR',
+    headerTitle: 'Banglore Metro',
     agency: 'BMRCL',
     color: '#A855F7',
     center: {

@@ -1,19 +1,37 @@
 import { GTFSEngine } from '../server/gtfsEngine.js';
+import { BangaloreEngine } from '../server/bangaloreEngine.js';
 
-let cachedEngine = null;
+let cachedKochiEngine = null;
+let cachedBangaloreEngine = null;
 
-function getEngine() {
-  if (!cachedEngine) {
-    cachedEngine = new GTFSEngine();
-    cachedEngine.load();
+function getKochiEngine() {
+  if (!cachedKochiEngine) {
+    cachedKochiEngine = new GTFSEngine();
+    cachedKochiEngine.load();
   }
-  return cachedEngine;
+  return cachedKochiEngine;
+}
+
+function getBangaloreEngine() {
+  if (!cachedBangaloreEngine) {
+    cachedBangaloreEngine = new BangaloreEngine();
+    cachedBangaloreEngine.load();
+  }
+  return cachedBangaloreEngine;
 }
 
 export default function handler(req, res) {
   try {
-    const engine = getEngine();
-    const data = engine.getActiveTrains();
+    const city = (req.query?.city || 'kochi').toLowerCase();
+    let data;
+
+    if (city === 'bengaluru' || city === 'bangalore') {
+      const engine = getBangaloreEngine();
+      data = engine.getActiveTrains();
+    } else {
+      const engine = getKochiEngine();
+      data = engine.getActiveTrains();
+    }
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -32,3 +50,4 @@ export default function handler(req, res) {
     });
   }
 }
+

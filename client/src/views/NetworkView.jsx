@@ -930,11 +930,11 @@ export function NetworkView() {
               title="Switch Metro City"
             >
               <span
-                className={`font-sans text-xs font-extrabold tracking-wider uppercase ${
+                className={`font-sans text-xs font-extrabold tracking-wide ${
                   isLight ? 'text-slate-900' : 'text-white'
                 }`}
               >
-                {cityConfig?.headerTitle || 'KOCHI METRO RADAR'}
+                {cityConfig?.headerTitle || 'Kochi Metro'}
               </span>
               <ChevronDown
                 size={13}
