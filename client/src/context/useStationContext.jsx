@@ -77,48 +77,22 @@ export function StationProvider({ children }) {
     setConnectionStatus('connected');
   }, []);
 
-  // 1. Synchronous instantaneous city data switch
-  useEffect(() => {
-    const nextStations = getCityStations(currentCity);
-    const nextTracks = getCityTracks(currentCity);
-    setStations(nextStations);
-    setTracksGeoJSON(nextTracks);
-    setActiveStation(nextStations[0] || null);
-    setNearestStation(null);
+  const isLocalDev =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      ['3000', '3001', '5173'].includes(window.location.port));
 
-    // Apply cached payload for this city if available, otherwise clear trains
-    if (latestPayloadsRef.current[currentCity]) {
-      applyPayload(latestPayloadsRef.current[currentCity], currentCity);
-    } else {
-      setTrains([]);
-    }
+  const apiBase =
+    import.meta.env.VITE_BACKEND_URL ||
+    (isLocalDev ? 'http://localhost:4000' : '');
+  const trainsApiUrl = `${apiBase}/api/trains`;
 
-    // Ask backend for city data via socket if connected
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('city:select', currentCity);
-    }
-  }, [currentCity, applyPayload]);
-
-  // 2. Connect to WebSocket or fallback to HTTP polling
-  useEffect(() => {
-    let pollingInterval = null;
-    let isSocketConnected = false;
-
-    const isLocalDev =
-      typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        ['3000', '3001', '5173'].includes(window.location.port));
-
-    const apiBase =
-      import.meta.env.VITE_BACKEND_URL ||
-      (isLocalDev ? 'http://localhost:4000' : '');
-    const trainsApiUrl = `${apiBase}/api/trains`;
-
-    // Fetch live train telemetry via HTTP endpoint
-    const fetchTrainsPoll = async () => {
+  // Fetch live train telemetry via HTTP endpoint
+  const fetchTrainsPoll = useCallback(
+    async (targetCity) => {
       try {
-        const cityParam = currentCityRef.current || 'kochi';
+        const cityParam = targetCity || currentCityRef.current || 'kochi';
         const res = await fetch(`${trainsApiUrl}?city=${cityParam}`);
         if (!res.ok) return;
         const payload = await res.json();
@@ -129,10 +103,39 @@ export function StationProvider({ children }) {
       } catch (err) {
         console.warn('[HTTP Polling] Error fetching trains:', err);
       }
-    };
+    },
+    [applyPayload, trainsApiUrl]
+  );
+
+  // 1. Synchronous instantaneous city data switch
+  useEffect(() => {
+    const nextStations = getCityStations(currentCity);
+    const nextTracks = getCityTracks(currentCity);
+    setStations(nextStations);
+    setTracksGeoJSON(nextTracks);
+    setActiveStation(nextStations[0] || null);
+    setNearestStation(null);
+
+    // Apply cached payload for this city if available, otherwise immediately fetch
+    if (latestPayloadsRef.current[currentCity]) {
+      applyPayload(latestPayloadsRef.current[currentCity], currentCity);
+    } else {
+      fetchTrainsPoll(currentCity);
+    }
+
+    // Ask backend for city data via socket if connected
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('city:select', currentCity);
+    }
+  }, [currentCity, applyPayload, fetchTrainsPoll]);
+
+  // 2. Connect to WebSocket or fallback to HTTP polling
+  useEffect(() => {
+    let pollingInterval = null;
+    let isSocketConnected = false;
 
     // Immediate initial fetch
-    fetchTrainsPoll();
+    fetchTrainsPoll(currentCityRef.current);
 
     const socketHost =
       import.meta.env.VITE_BACKEND_URL ||
