@@ -1,9 +1,20 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { CITIES } from '../utils/cityConfig.js';
+import { getCityStations, getCityTracks } from '../data/cityMetroData.js';
 
 const StationContext = createContext(null);
 
 export function StationProvider({ children }) {
+  const [currentCity, setCurrentCity] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('kmr_city');
+      if (stored && CITIES[stored]) return stored;
+    }
+    return 'kochi';
+  });
+  const cityConfig = CITIES[currentCity] || CITIES.kochi;
+
   const [trains, setTrains] = useState([]);
   const [istTime, setIstTime] = useState('');
   const [isSimulated, setIsSimulated] = useState(false);
@@ -12,80 +23,123 @@ export function StationProvider({ children }) {
   const [opensAt, setOpensAt] = useState('06:00 AM');
   const [nextServiceText, setNextServiceText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('connecting');
-  const [stations, setStations] = useState([]);
-  const [tracksGeoJSON, setTracksGeoJSON] = useState(null);
-  const [activeStation, setActiveStation] = useState(null);
+  const [stations, setStations] = useState(() => getCityStations(currentCity));
+  const [tracksGeoJSON, setTracksGeoJSON] = useState(() => getCityTracks(currentCity));
+  const [activeStation, setActiveStation] = useState(() => {
+    const sts = getCityStations(currentCity);
+    if (currentCity === 'bengaluru') {
+      return sts.find((s) => s.id === 'BLR-MAJ-15') || sts[0] || null;
+    }
+    return sts[0] || null;
+  });
   const [nearestStation, setNearestStation] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
 
-  // 1. Fetch Station and Track GeoJSON
-  useEffect(() => {
-    fetch('/data/stations.geojson')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.features) {
-          const list = data.features.map((f) => ({
-            id: f.properties.stop_id,
-            name: f.properties.stop_name,
-            lon: f.geometry.coordinates[0],
-            lat: f.geometry.coordinates[1],
-          }));
-          setStations(list);
-        }
-      })
-      .catch((err) => console.error('Error fetching stations:', err));
+  // Cache latest payloads per city for instant switching
+  const latestPayloadsRef = useRef({
+    kochi: null,
+    bengaluru: null,
+  });
 
-    fetch('/data/tracks.geojson')
-      .then((res) => res.json())
-      .then((data) => setTracksGeoJSON(data))
-      .catch((err) => console.error('Error fetching tracks:', err));
+  const currentCityRef = useRef(currentCity);
+  useEffect(() => {
+    currentCityRef.current = currentCity;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kmr_city', currentCity);
+    }
+  }, [currentCity]);
+
+  const socketRef = useRef(null);
+
+  const applyPayload = useCallback((payload, targetCity) => {
+    if (!payload) return;
+    const activeCity = targetCity || currentCityRef.current;
+    const rawTrains = payload.trains || [];
+    const isBlr = activeCity === 'bengaluru';
+    // Strictly isolate trains: BMRCL trains only in Bengaluru, KMRL trains only in Kochi
+    const filteredTrains = rawTrains.filter((t) => {
+      const isBlrTrain = Boolean(t.id && t.id.startsWith('BMRCL-'));
+      return isBlr ? isBlrTrain : !isBlrTrain;
+    });
+
+    setIstTime(payload.istTime || '');
+    setIsSimulated(Boolean(payload.isSimulatedClock));
+    setTrains(filteredTrains);
+    if (payload.serviceStatus) {
+      setServiceStatus(payload.serviceStatus);
+      setIsOpen(payload.serviceStatus === 'open');
+    } else if (typeof payload.isOpen === 'boolean') {
+      setIsOpen(payload.isOpen);
+      setServiceStatus(payload.isOpen ? 'open' : 'closed');
+    }
+    if (payload.opensAt) setOpensAt(payload.opensAt);
+    if (payload.nextServiceText) setNextServiceText(payload.nextServiceText);
+    setConnectionStatus('connected');
   }, []);
 
-  // 2. Connect to WebSocket or fallback to HTTP polling (for Vercel Serverless)
+  // 1. Synchronous instantaneous city data switch
+  useEffect(() => {
+    const nextStations = getCityStations(currentCity);
+    const nextTracks = getCityTracks(currentCity);
+    setStations(nextStations);
+    setTracksGeoJSON(nextTracks);
+    setActiveStation(nextStations[0] || null);
+    setNearestStation(null);
+
+    // Apply cached payload for this city if available, otherwise clear trains
+    if (latestPayloadsRef.current[currentCity]) {
+      applyPayload(latestPayloadsRef.current[currentCity], currentCity);
+    } else {
+      setTrains([]);
+    }
+
+    // Ask backend for city data via socket if connected
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('city:select', currentCity);
+    }
+  }, [currentCity, applyPayload]);
+
+  // 2. Connect to WebSocket or fallback to HTTP polling
   useEffect(() => {
     let pollingInterval = null;
     let isSocketConnected = false;
 
-    const apiBase = import.meta.env.VITE_BACKEND_URL || '';
+    const isLocalDev =
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        ['3000', '3001', '5173'].includes(window.location.port));
+
+    const apiBase =
+      import.meta.env.VITE_BACKEND_URL ||
+      (isLocalDev ? 'http://localhost:4000' : '');
     const trainsApiUrl = `${apiBase}/api/trains`;
 
-    // Fetch live train telemetry via Serverless HTTP endpoint
+    // Fetch live train telemetry via HTTP endpoint
     const fetchTrainsPoll = async () => {
       try {
-        const res = await fetch(trainsApiUrl);
+        const cityParam = currentCityRef.current || 'kochi';
+        const res = await fetch(`${trainsApiUrl}?city=${cityParam}`);
         if (!res.ok) return;
         const payload = await res.json();
-        if (payload) {
-          setIstTime(payload.istTime || '');
-          setIsSimulated(Boolean(payload.isSimulatedClock));
-          setTrains(payload.trains || []);
-          if (payload.serviceStatus) {
-            setServiceStatus(payload.serviceStatus);
-            setIsOpen(payload.serviceStatus === 'open');
-          } else if (typeof payload.isOpen === 'boolean') {
-            setIsOpen(payload.isOpen);
-            setServiceStatus(payload.isOpen ? 'open' : 'closed');
-          }
-          if (payload.opensAt) setOpensAt(payload.opensAt);
-          if (payload.nextServiceText) setNextServiceText(payload.nextServiceText);
-          setConnectionStatus('connected');
+        latestPayloadsRef.current[cityParam] = payload;
+        if (currentCityRef.current === cityParam) {
+          applyPayload(payload, cityParam);
         }
       } catch (err) {
         console.warn('[HTTP Polling] Error fetching trains:', err);
       }
     };
 
-    // Immediate initial fetch for instantaneous load without waiting
+    // Immediate initial fetch
     fetchTrainsPoll();
 
     const socketHost =
       import.meta.env.VITE_BACKEND_URL ||
-      (window.location.port === '3000' ? 'http://localhost:4000' : window.location.origin);
+      (isLocalDev ? 'http://localhost:4000' : window.location.origin);
 
     const isLocalOrHasBackend =
-      Boolean(import.meta.env.VITE_BACKEND_URL) || window.location.port === '3000';
-
-    let socket = null;
+      Boolean(import.meta.env.VITE_BACKEND_URL) || isLocalDev;
 
     const startPolling = () => {
       if (!pollingInterval) {
@@ -101,17 +155,19 @@ export function StationProvider({ children }) {
     };
 
     if (isLocalOrHasBackend) {
-      socket = io(socketHost, {
+      const socket = io(socketHost, {
         reconnection: true,
-        reconnectionDelay: 2000,
-        timeout: 3000,
+        reconnectionDelay: 1500,
+        timeout: 4000,
       });
+      socketRef.current = socket;
 
       socket.on('connect', () => {
         isSocketConnected = true;
         stopPolling();
         setConnectionStatus('connected');
-        console.log('[Socket.io] Connected to KMRL backend');
+        console.log('[Socket.io] Connected to Metro Radar backend');
+        socket.emit('city:select', currentCityRef.current);
       });
 
       socket.on('disconnect', () => {
@@ -125,33 +181,39 @@ export function StationProvider({ children }) {
         }
       });
 
+      // City-specific real-time updates
       socket.on('trains:update', (payload) => {
-        if (!payload) return;
-        setIstTime(payload.istTime || '');
-        setIsSimulated(Boolean(payload.isSimulatedClock));
-        setTrains(payload.trains || []);
-        if (payload.serviceStatus) {
-          setServiceStatus(payload.serviceStatus);
-          setIsOpen(payload.serviceStatus === 'open');
-        } else if (typeof payload.isOpen === 'boolean') {
-          setIsOpen(payload.isOpen);
-          setServiceStatus(payload.isOpen ? 'open' : 'closed');
+        latestPayloadsRef.current.kochi = payload;
+        if (currentCityRef.current === 'kochi') {
+          applyPayload(payload, 'kochi');
         }
-        if (payload.opensAt) setOpensAt(payload.opensAt);
-        if (payload.nextServiceText) setNextServiceText(payload.nextServiceText);
+      });
+
+      socket.on('trains:update:kochi', (payload) => {
+        latestPayloadsRef.current.kochi = payload;
+        if (currentCityRef.current === 'kochi') {
+          applyPayload(payload, 'kochi');
+        }
+      });
+
+      socket.on('trains:update:bengaluru', (payload) => {
+        latestPayloadsRef.current.bengaluru = payload;
+        if (currentCityRef.current === 'bengaluru') {
+          applyPayload(payload, 'bengaluru');
+        }
       });
     } else {
-      // 100% Vercel deployment: use regular 3.5s HTTP polling
       startPolling();
     }
 
     return () => {
       stopPolling();
-      if (socket) {
-        socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
-  }, []);
+  }, [applyPayload]);
 
   // Helper to find train by id
   const getTrainById = useCallback(
@@ -161,6 +223,9 @@ export function StationProvider({ children }) {
 
   const value = useMemo(
     () => ({
+      currentCity,
+      setCurrentCity,
+      cityConfig,
       trains,
       activeTrainsCount: trains.length,
       istTime,
@@ -181,6 +246,8 @@ export function StationProvider({ children }) {
       getTrainById,
     }),
     [
+      currentCity,
+      cityConfig,
       trains,
       istTime,
       isSimulated,

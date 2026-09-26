@@ -1,0 +1,1250 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.4667,
+          12.8988
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-01",
+        "stop_name": "Challaghatta",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.4789,
+          12.908
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-02",
+        "stop_name": "Kengeri",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.4877,
+          12.9152
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-03",
+        "stop_name": "Kengeri Bus Terminal",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.4988,
+          12.9234
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-04",
+        "stop_name": "Pattanagere",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5065,
+          12.9304
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-05",
+        "stop_name": "Jnanabharathi",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.516,
+          12.9388
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-06",
+        "stop_name": "Rajarajeshwari Nagar",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5255,
+          12.9466
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-07",
+        "stop_name": "Nayandahalli",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5348,
+          12.9538
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-08",
+        "stop_name": "Mysore Road",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5422,
+          12.9577
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-09",
+        "stop_name": "Deepanjali Nagar",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5501,
+          12.962
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-10",
+        "stop_name": "Attiguppe",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5568,
+          12.9664
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-11",
+        "stop_name": "Vijayanagar",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5645,
+          12.971
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-12",
+        "stop_name": "Hosahalli",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5675,
+          12.9756
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-13",
+        "stop_name": "Magadi Road",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5705,
+          12.9782
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-14",
+        "stop_name": "KSR City Railway Station",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5727,
+          12.9757
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-MAJ-15",
+        "stop_name": "Nadaprabhu Kempegowda (Majestic)",
+        "line": "interchange"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5833,
+          12.9738
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-16",
+        "stop_name": "Sir M. Visveshwaraya (Central College)",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5925,
+          12.9797
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-17",
+        "stop_name": "Dr. B.R. Ambedkar (Vidhana Soudha)",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5997,
+          12.981
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-18",
+        "stop_name": "Cubbon Park",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6068,
+          12.9755
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-19",
+        "stop_name": "Mahatma Gandhi Road (MG Road)",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6171,
+          12.9729
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-20",
+        "stop_name": "Trinity",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6267,
+          12.976
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-21",
+        "stop_name": "Halasuru",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6385,
+          12.9783
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-22",
+        "stop_name": "Indiranagar",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.648,
+          12.986
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-23",
+        "stop_name": "Swami Vivekananda Road",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6534,
+          12.9908
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-24",
+        "stop_name": "Baiyappanahalli",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6625,
+          12.995
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-25",
+        "stop_name": "Benniganahalli",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6766,
+          12.9986
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-26",
+        "stop_name": "Krishnarajapura (KR Puram)",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6888,
+          12.9965
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-27",
+        "stop_name": "Singayyanapalya",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7012,
+          12.9934
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-28",
+        "stop_name": "Garudacharpalya",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7144,
+          12.9912
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-29",
+        "stop_name": "Hoodi",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7215,
+          12.9877
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-30",
+        "stop_name": "Seetharampalya",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7262,
+          12.9798
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-31",
+        "stop_name": "Kundalahalli",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7345,
+          12.974
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-32",
+        "stop_name": "Nallurhalli",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.742,
+          12.9698
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-33",
+        "stop_name": "Sri Sathya Sai Hospital",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7478,
+          12.9675
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-34",
+        "stop_name": "Pattandur Agrahara",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7554,
+          12.9732
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-35",
+        "stop_name": "Kadugodi Tree Park",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.7588,
+          12.9835
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-36",
+        "stop_name": "Hopefarm Channasandra",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.761,
+          12.996
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-PUR-37",
+        "stop_name": "Whitefield (Kadugodi)",
+        "line": "purple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.476,
+          13.0645
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-01",
+        "stop_name": "Madavara (BIEC)",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.487,
+          13.0535
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-02",
+        "stop_name": "Chikkabidarakallu",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.495,
+          13.045
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-03",
+        "stop_name": "Manjunathanagar",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5005,
+          13.0385
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-04",
+        "stop_name": "Nagasandra",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5132,
+          13.0435
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-05",
+        "stop_name": "Dasarahalli",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5218,
+          13.0392
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-06",
+        "stop_name": "Jalahalli",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5255,
+          13.0315
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-07",
+        "stop_name": "Peenya Industry",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5298,
+          13.0232
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-08",
+        "stop_name": "Peenya",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5385,
+          13.0185
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-09",
+        "stop_name": "Goraguntepalya",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5495,
+          13.023
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-10",
+        "stop_name": "Yeshwanthpur",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5545,
+          13.0145
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-11",
+        "stop_name": "Sandal Soap Factory",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.55,
+          13.008
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-12",
+        "stop_name": "Mahalakshmi",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5552,
+          13.0005
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-13",
+        "stop_name": "Rajajinagar",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5585,
+          12.993
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-14",
+        "stop_name": "Kuvempu Road",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.563,
+          12.987
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-15",
+        "stop_name": "Srirampura",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5702,
+          12.991
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-16",
+        "stop_name": "Sampige Road (Malleshwaram)",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5742,
+          12.966
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-17",
+        "stop_name": "Chickpete",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.575,
+          12.9585
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-18",
+        "stop_name": "Krishna Rajendra Market",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5735,
+          12.9505
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-19",
+        "stop_name": "National College",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5795,
+          12.946
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-20",
+        "stop_name": "Lalbagh",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5815,
+          12.9375
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-21",
+        "stop_name": "South End Circle",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.58,
+          12.9295
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-22",
+        "stop_name": "Jayanagar",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5795,
+          12.9215
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-23",
+        "stop_name": "Rashtreeya Vidyalaya Road (RV Road)",
+        "line": "interchange"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.574,
+          12.9155
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-24",
+        "stop_name": "Banashankari",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5745,
+          12.9075
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-25",
+        "stop_name": "Jaya Prakash Nagar",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5705,
+          12.896
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-26",
+        "stop_name": "Yelachenahalli",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5665,
+          12.8855
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-27",
+        "stop_name": "Konanakunte Cross",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5595,
+          12.8755
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-28",
+        "stop_name": "Doddakallasandra",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5525,
+          12.866
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-29",
+        "stop_name": "Vajrahalli",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5435,
+          12.855
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-30",
+        "stop_name": "Thalaghattapura",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.534,
+          12.842
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-GRN-31",
+        "stop_name": "Silk Institute",
+        "line": "green"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.5884,
+          12.917
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-02",
+        "stop_name": "Ragigudda",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6001,
+          12.9167
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-03",
+        "stop_name": "Jayadeva Hospital",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6083,
+          12.9166
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-04",
+        "stop_name": "BTM Layout",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6206,
+          12.9165
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-05",
+        "stop_name": "Central Silk Board",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6266,
+          12.9107
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-06",
+        "stop_name": "Bommanahalli",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6321,
+          12.9017
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-07",
+        "stop_name": "Hongasandra",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6425,
+          12.8885
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-08",
+        "stop_name": "Kudlu Gate",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6498,
+          12.8796
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-09",
+        "stop_name": "Singasandra",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6525,
+          12.8708
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-10",
+        "stop_name": "Hosa Road",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.658,
+          12.8639
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-11",
+        "stop_name": "Beratena Agrahara",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.665,
+          12.853
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-12",
+        "stop_name": "Electronic City",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6715,
+          12.8461
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-13",
+        "stop_name": "Infosys Foundation Konappana Agrahara",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6775,
+          12.839
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-14",
+        "stop_name": "Huskur Road",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6813,
+          12.8291
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-15",
+        "stop_name": "Biocon Hebbagodi",
+        "line": "yellow"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          77.6855,
+          12.8169
+        ]
+      },
+      "properties": {
+        "stop_id": "BLR-YEL-16",
+        "stop_name": "Delta Electronics Bommasandra",
+        "line": "yellow"
+      }
+    }
+  ]
+}

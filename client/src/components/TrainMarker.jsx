@@ -48,19 +48,37 @@ export function TrainMarker({
     }
   };
 
-  const trainShortId = train.id.replace('KMRL-', '');
+  const trainShortId = train.id.replace('KMRL-', '').replace('BMRCL-', '');
+
+  const isPurple = train.line === 'purple' || train.id.includes('-P');
+  const isGreen = train.line === 'green' || train.id.includes('-G');
+  const isYellow = train.line === 'yellow' || train.id.includes('-Y');
 
   // Direction classification:
-  // directionId === 1 or '-N' => Towards Aluva (Northbound)
-  // directionId === 0 or '-S' => Towards Thripunithura (Southbound)
+  // directionId === 1 or '-N' => Towards Aluva / Whitefield / Madavara / RV Road
+  // directionId === 0 or 2 or '-S' => Towards Thripunithura / Challaghatta / Silk Institute / Bommasandra
   const isNorthbound =
     train.directionId === 1 ||
     train.direction === 1 ||
     train.id.includes('-N') ||
-    (train.destination && train.destination.toLowerCase().includes('aluva'));
+    (train.destination && train.destination.toLowerCase().includes('aluva')) ||
+    (train.destination && train.destination.toLowerCase().includes('madavara')) ||
+    (train.destination && train.destination.toLowerCase().includes('rv road')) ||
+    (train.destination && train.destination.toLowerCase().includes('whitefield'));
 
-  const directionLabel = isNorthbound ? 'ALUVA' : 'THRIPUNITHURA';
-  const directionGlyph = isNorthbound ? '▲' : '▼';
+  const isBlr = Boolean(train.id && train.id.startsWith('BMRCL-'));
+  const fallbackNorth = isBlr ? (isGreen ? 'MADAVARA' : isYellow ? 'RV ROAD' : 'WHITEFIELD') : 'ALUVA';
+  const fallbackSouth = isBlr ? (isGreen ? 'SILK INSTITUTE' : isYellow ? 'BOMMASANDRA' : 'CHALLAGHATTA') : 'THRIPUNITHURA';
+
+  const directionLabel = train.destination
+    ? train.destination.toUpperCase()
+    : isNorthbound
+    ? fallbackNorth
+    : fallbackSouth;
+
+  const tooltipDirectionGlyph = isPurple
+    ? (isNorthbound ? '➔' : '⬅')
+    : (isNorthbound ? '▲' : '▼');
 
   // Visual style definitions based on state and direction
   const visualConfig = useMemo(() => {
@@ -99,10 +117,62 @@ export function TrainMarker({
       };
     }
 
+    if (isPurple) {
+      // Bengaluru Purple Line
+      return {
+        id: 'purple-line',
+        bodyGrad: isLight ? ['#9333EA', '#7E22CE'] : ['#C084FC', '#9333EA'],
+        strokeColor: isLight ? '#FFFFFF' : '#E9D5FF',
+        strokeWidth: isLight ? 1.4 : 1.1,
+        glowFilter: isLight
+          ? 'drop-shadow(0 2px 5px rgba(147, 51, 234, 0.4))'
+          : 'drop-shadow(0 0 8px rgba(192, 132, 252, 0.75))',
+        beamGradient: isLight
+          ? 'linear-gradient(to top, rgba(147, 51, 234, 0.35), rgba(147, 51, 234, 0))'
+          : 'linear-gradient(to top, rgba(192, 132, 252, 0.5), rgba(192, 132, 252, 0))',
+        badgeColor: isLight ? '#7E22CE' : '#C084FC',
+        pingClass: null,
+      };
+    }
+
+    if (isGreen) {
+      // Bengaluru Green Line
+      return {
+        id: 'green-line',
+        bodyGrad: isLight ? ['#059669', '#047857'] : ['#34D399', '#059669'],
+        strokeColor: isLight ? '#FFFFFF' : '#A7F3D0',
+        strokeWidth: isLight ? 1.4 : 1.1,
+        glowFilter: isLight
+          ? 'drop-shadow(0 2px 5px rgba(5, 150, 105, 0.4))'
+          : 'drop-shadow(0 0 8px rgba(52, 211, 153, 0.75))',
+        beamGradient: isLight
+          ? 'linear-gradient(to top, rgba(5, 150, 105, 0.35), rgba(5, 150, 105, 0))'
+          : 'linear-gradient(to top, rgba(52, 211, 153, 0.5), rgba(52, 211, 153, 0))',
+        badgeColor: isLight ? '#047857' : '#34D399',
+        pingClass: null,
+      };
+    }
+
+    if (isYellow) {
+      // Bengaluru Yellow Line
+      return {
+        id: 'yellow-line',
+        bodyGrad: isLight ? ['#CA8A04', '#A16207'] : ['#FACC15', '#EAB308'],
+        strokeColor: isLight ? '#FFFFFF' : '#FEF08A',
+        strokeWidth: isLight ? 1.4 : 1.1,
+        glowFilter: isLight
+          ? 'drop-shadow(0 2px 5px rgba(202, 138, 4, 0.4))'
+          : 'drop-shadow(0 0 8px rgba(250, 204, 21, 0.85))',
+        beamGradient: isLight
+          ? 'linear-gradient(to top, rgba(202, 138, 4, 0.35), rgba(202, 138, 4, 0))'
+          : 'linear-gradient(to top, rgba(250, 204, 21, 0.55), rgba(250, 204, 21, 0))',
+        badgeColor: isLight ? '#A16207' : '#FACC15',
+        pingClass: null,
+      };
+    }
+
     if (isNorthbound) {
       // Northbound (Towards Aluva):
-      // In Light: Deep KMRL Teal with white stroke and crisp shadow
-      // In Dark: Ice Aurora Sky Blue with cyan glow
       return {
         id: 'northbound',
         bodyGrad: isLight ? ['#0D9488', '#0F766E'] : ['#38BDF8', '#0284C7'],
@@ -134,7 +204,7 @@ export function TrainMarker({
       badgeColor: isLight ? '#D97706' : '#FBBF24',
       pingClass: null,
     };
-  }, [isRecommended, isSelected, isNorthbound, theme]);
+  }, [isRecommended, isSelected, isPurple, isGreen, isNorthbound, theme]);
 
   const gradientId = `train-grad-${train.id}`;
 
@@ -282,7 +352,7 @@ export function TrainMarker({
                 fill="#FFFFFF"
                 letterSpacing="-0.5px"
               >
-                {directionGlyph}
+                ▲
               </text>
               <text
                 x="7"
@@ -296,7 +366,6 @@ export function TrainMarker({
               >
                 {trainShortId}
               </text>
-
               {/* Dual Ruby Rear Marker Tail-Lights */}
               <circle cx="3.8" cy="32.5" r="0.9" fill="#EF4444" />
               <circle cx="10.2" cy="32.5" r="0.9" fill="#EF4444" />
@@ -323,7 +392,7 @@ export function TrainMarker({
                 className="font-sans font-extrabold flex items-center gap-1 tracking-tight"
                 style={{ color: visualConfig.badgeColor }}
               >
-                <span>{directionGlyph}</span>
+                <span>{tooltipDirectionGlyph}</span>
                 <span>TRAIN <span className="font-mono font-bold">{trainShortId}</span></span>
               </span>
               <span

@@ -65,14 +65,16 @@ export function FocusView() {
 
   const train = useMemo(() => {
     if (!id || !trains.length) return null;
-    const cleanId = id.toLowerCase().replace('kmrl-', '');
+    const cleanId = id.toLowerCase().replace('kmrl-', '').replace('bmrcl-', '');
     return trains.find((t) => {
-      const tClean = (t.id || '').toLowerCase().replace('kmrl-', '');
+      const tClean = (t.id || '').toLowerCase().replace('kmrl-', '').replace('bmrcl-', '');
       return tClean === cleanId || (t.id || '').toLowerCase() === id.toLowerCase();
     });
   }, [trains, id]);
 
-  const trainShortId = train ? train.id.replace('KMRL-', '') : (id ? id.replace('KMRL-', '') : '');
+  const trainShortId = train
+    ? (train.id.startsWith('BMRCL-') ? train.id : train.id.replace('KMRL-', ''))
+    : (id ? (id.startsWith('BMRCL-') ? id : id.replace('KMRL-', '')) : '');
 
   const isNorthbound = useMemo(() => {
     if (!train) return false;
@@ -80,15 +82,21 @@ export function FocusView() {
       train.directionId === 1 ||
       train.direction === 1 ||
       (train.id && train.id.includes('-N')) ||
-      (train.destination && train.destination.toLowerCase().includes('aluva'))
+      (train.id && (train.id.includes('-P01') || train.id.includes('-P02') || train.id.includes('-P03') || train.id.includes('-P04') || train.id.includes('-P05') || train.id.includes('-P06'))) ||
+      (train.id && (train.id.includes('-G01') || train.id.includes('-G02') || train.id.includes('-G03') || train.id.includes('-G04') || train.id.includes('-G05'))) ||
+      (train.id && (train.id.includes('-Y01') || train.id.includes('-Y02') || train.id.includes('-Y03') || train.id.includes('-Y04'))) ||
+      (train.destination && train.destination.toLowerCase().includes('aluva')) ||
+      (train.destination && train.destination.toLowerCase().includes('whitefield')) ||
+      (train.destination && train.destination.toLowerCase().includes('madavara')) ||
+      (train.destination && (train.destination.toLowerCase().includes('rv road') || train.destination.toLowerCase().includes('vidyalaya')))
     );
   }, [train]);
 
-  const [viewState, setViewState] = useState({
-    longitude: 76.315,
-    latitude: 10.025,
+  const [viewState, setViewState] = useState(() => ({
+    longitude: train?.lng || 76.315,
+    latitude: train?.lat || 10.025,
     zoom: 14,
-  });
+  }));
 
   const [isLockedOnTrain, setIsLockedOnTrain] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -373,7 +381,23 @@ export function FocusView() {
 
                 <div className="flex items-center gap-2">
                   <span className={`font-mono text-[10px] tracking-wider uppercase ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {isNorthbound ? 'TOWARDS NORTH' : 'TOWARDS SOUTH'}
+                    {(() => {
+                      const isBlr = Boolean(train?.id && train.id.startsWith('BMRCL-'));
+                      const isGreen = train?.line === 'green' || (train?.id && train.id.includes('-G'));
+                      const isYellow = train?.line === 'yellow' || (train?.id && train.id.includes('-Y'));
+                      if (train?.directionName) return `TOWARDS ${train.directionName.toUpperCase()}`;
+                      if (train?.destination) return `TOWARDS ${train.destination.toUpperCase()}`;
+                      if (isBlr) {
+                        if (isGreen) {
+                          return isNorthbound ? 'TOWARDS NORTH (MADAVARA)' : 'TOWARDS SOUTH (SILK INSTITUTE)';
+                        }
+                        if (isYellow) {
+                          return isNorthbound ? 'TOWARDS NORTH (RV ROAD)' : 'TOWARDS SOUTH (BOMMASANDRA)';
+                        }
+                        return isNorthbound ? 'TOWARDS EAST (WHITEFIELD)' : 'TOWARDS WEST (CHALLAGHATTA)';
+                      }
+                      return isNorthbound ? 'TOWARDS NORTH' : 'TOWARDS SOUTH';
+                    })()}
                   </span>
                   <span
                     className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase ${
@@ -388,17 +412,42 @@ export function FocusView() {
               {/* Corridor Progress Bar */}
               <div className="flex flex-col gap-2">
                 <div className={`flex items-center justify-between font-mono text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                  <span>FROM {(train.origin || 'Aluva').toUpperCase()}</span>
-                  <span className={isLight ? 'text-slate-400' : 'text-slate-500'}>
-                    {Math.round(train.progress || 0)}% TRIP
-                  </span>
-                  <span>TO {(train.destination || 'Thripunithura').toUpperCase()}</span>
+                  {(() => {
+                    const isBlr = Boolean(train?.id && train.id.startsWith('BMRCL-'));
+                    const isGreen = train?.line === 'green' || (train?.id && train.id.includes('-G'));
+                    const isYellow = train?.line === 'yellow' || (train?.id && train.id.includes('-Y'));
+                    const fallbackOrigin = isBlr
+                      ? isGreen ? 'Madavara' : isYellow ? 'Bommasandra' : 'Challaghatta'
+                      : 'Aluva';
+                    const fallbackDest = isBlr
+                      ? isGreen ? 'Silk Institute' : isYellow ? 'RV Road' : 'Whitefield'
+                      : 'Thripunithura';
+                    return (
+                      <>
+                        <span>FROM {(train.origin || fallbackOrigin).toUpperCase()}</span>
+                        <span className={isLight ? 'text-slate-400' : 'text-slate-500'}>
+                          {Math.round(train.progress || 0)}% TRIP
+                        </span>
+                        <span>TO {(train.destination || fallbackDest).toUpperCase()}</span>
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className={`w-full h-1 rounded-full overflow-hidden ${isLight ? 'bg-slate-200' : 'bg-white/5'}`}>
-                  <div
-                    className={`h-full transition-all duration-300 ${isLight ? 'bg-teal-600' : 'bg-[#00A896]'}`}
-                    style={{ width: `${Math.min(100, Math.max(2, train.progress || 0))}%` }}
-                  />
+                  {(() => {
+                    const isBlr = Boolean(train?.id && train.id.startsWith('BMRCL-'));
+                    const isGreen = train?.line === 'green' || (train?.id && train.id.includes('-G'));
+                    const isYellow = train?.line === 'yellow' || (train?.id && train.id.includes('-Y'));
+                    const barColor = isLight
+                      ? isGreen ? 'bg-emerald-600' : isYellow ? 'bg-amber-500' : isBlr ? 'bg-purple-600' : 'bg-teal-600'
+                      : isGreen ? 'bg-emerald-500' : isYellow ? 'bg-yellow-400' : isBlr ? 'bg-purple-500' : 'bg-[#00A896]';
+                    return (
+                      <div
+                        className={`h-full transition-all duration-300 ${barColor}`}
+                        style={{ width: `${Math.min(100, Math.max(2, train.progress || 0))}%` }}
+                      />
+                    );
+                  })()}
                 </div>
               </div>
             </div>

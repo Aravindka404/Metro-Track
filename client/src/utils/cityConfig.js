@@ -1,0 +1,48 @@
+export const CITIES = {
+  kochi: {
+    id: 'kochi',
+    name: 'Kochi Metro',
+    subname: 'KMRL',
+    headerTitle: 'KOCHI METRO RADAR',
+    agency: 'KMRL',
+    color: '#06B6D4',
+    center: {
+      longitude: 76.315,
+      latitude: 10.025,
+      zoom: 11.6,
+    },
+    bounds: [
+      [76.15, 9.80],
+      [76.50, 10.25],
+    ],
+    stationsFile: '/data/stations.geojson',
+    fallbackStationsFile: '/api/stations?city=kochi',
+    tracksFile: '/data/tracks.geojson',
+    fallbackTracksFile: '/api/tracks?city=kochi',
+    opensAt: '06:00 AM',
+    closesAt: '10:30 PM',
+  },
+  bengaluru: {
+    id: 'bengaluru',
+    name: 'Bengaluru Metro',
+    subname: 'Namma Metro (BMRCL)',
+    headerTitle: 'NAMMA METRO RADAR',
+    agency: 'BMRCL',
+    color: '#A855F7',
+    center: {
+      longitude: 77.573,
+      latitude: 12.976,
+      zoom: 12.5,
+    },
+    bounds: [
+      [77.30, 12.75],
+      [77.90, 13.20],
+    ],
+    stationsFile: '/data/bengaluru/stations.geojson',
+    fallbackStationsFile: '/api/stations?city=bengaluru',
+    tracksFile: '/data/bengaluru/tracks.geojson',
+    fallbackTracksFile: '/api/tracks?city=bengaluru',
+    opensAt: '05:00 AM',
+    closesAt: '11:00 PM',
+  },
+};

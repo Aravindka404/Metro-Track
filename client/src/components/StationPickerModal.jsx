@@ -21,6 +21,7 @@ export function StationPickerModal({
   destinationStation = null,
   onSelectStation,
   theme,
+  cityConfig,
 }) {
   const isLight = theme?.isLight;
   const isDestination = mode === 'destination';
@@ -50,7 +51,7 @@ export function StationPickerModal({
               isLight ? 'bg-white border-slate-200' : 'bg-[#0E1626] border-white/15'
             }`}
           >
-            {/* Header Area (No Search Bar to prevent mobile keyboard pop-up) */}
+            {/* Header Area */}
             <div
               className={`p-4 sm:p-5 border-b flex items-center justify-between shrink-0 ${
                 isLight ? 'bg-white border-slate-100' : 'bg-[#0E1626] border-white/10'
@@ -75,7 +76,9 @@ export function StationPickerModal({
                     {isDestination ? 'Select Destination' : 'Select Boarding Station'}
                   </h3>
                   <p className={`font-sans text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Tap a station along Line 1 (Aluva ➔ Thripunithura)
+                    {cityConfig?.id === 'bengaluru'
+                      ? 'Tap a station along Purple, Green, or Yellow line'
+                      : 'Tap a station along Line 1 (Aluva ➔ Thripunithura)'}
                   </p>
                 </div>
               </div>
@@ -99,7 +102,7 @@ export function StationPickerModal({
             >
               {stations.map((station, idx) => {
                 const normId = normalizeStationId(station.id);
-                const interchange = INTERCHANGES[normId];
+                const interchange = cityConfig?.id === 'kochi' ? INTERCHANGES[normId] : null;
                 const isSelected = selectedStationId === station.id;
                 const isOther = otherStationId === station.id;
 
@@ -141,32 +144,53 @@ export function StationPickerModal({
                       </div>
 
                       <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`font-sans text-sm font-bold tracking-tight truncate ${
-                              isLight ? 'text-slate-900' : 'text-white'
-                            }`}
-                          >
-                            {station.name}
-                          </span>
-                          <span
-                            className={`font-mono text-[10px] font-semibold uppercase ${
-                              isLight ? 'text-slate-500' : 'text-slate-400'
-                            }`}
-                          >
-                            {station.id}
-                          </span>
-                        </div>
+                        <span
+                          className={`font-sans text-sm font-bold tracking-tight truncate ${
+                            isLight ? 'text-slate-900' : 'text-white'
+                          }`}
+                        >
+                          {station.name}
+                        </span>
 
-                        {/* Multi-modal interchange tag */}
-                        {interchange && (
+                        {/* Multi-modal interchange or Line badge tag */}
+                        {interchange ? (
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border ${interchange.color}`}>
                               <interchange.icon size={10} strokeWidth={2.5} />
                               {interchange.label}
                             </span>
                           </div>
-                        )}
+                        ) : station.line === 'purple' ? (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border text-purple-400 bg-purple-500/10 border-purple-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                              Purple Line
+                            </span>
+                          </div>
+                        ) : station.line === 'green' ? (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border text-emerald-400 bg-emerald-500/10 border-emerald-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              Green Line
+                            </span>
+                          </div>
+                        ) : station.line === 'yellow' ? (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border text-yellow-400 bg-yellow-500/10 border-yellow-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                              Yellow Line
+                            </span>
+                          </div>
+                        ) : station.line === 'interchange' ? (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border text-amber-400 bg-amber-500/10 border-amber-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              {station.id === 'BLR-GRN-23'
+                                ? 'RV Road Interchange (Green & Yellow)'
+                                : 'Majestic Interchange (Purple & Green)'}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
@@ -206,7 +230,9 @@ export function StationPickerModal({
                   : 'bg-[#0A0F1A] border-white/10 text-slate-400'
               }`}
             >
-              25 Stations • Direct Interchange Connections Available
+              {cityConfig?.id === 'bengaluru'
+                ? `${stations.length} Stations • Purple & Green Lines • Majestic Interchange`
+                : `${stations.length} Stations • Direct Feeder & Water Metro Connections`}
             </div>
           </motion.div>
         </div>

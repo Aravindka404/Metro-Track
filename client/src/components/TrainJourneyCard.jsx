@@ -18,8 +18,18 @@ export function TrainJourneyCard({
   if (!train) return null;
 
   const isNorth = train.direction === 1;
-  const directionGlyph = isNorth ? "▲" : "▼";
-  const dotColor = isNorth
+  const isPurple = train.line === 'purple' || (train.id && train.id.includes('-P'));
+  const isGreen = train.line === 'green' || (train.id && train.id.includes('-G'));
+  const isYellow = train.line === 'yellow' || (train.id && train.id.includes('-Y'));
+  const directionGlyph = isPurple ? (isNorth ? "➔" : "⬅") : (isNorth ? "▲" : "▼");
+
+  const dotColor = isPurple
+    ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"
+    : isGreen
+    ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+    : isYellow
+    ? "bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
+    : isNorth
     ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
     : "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]";
 
@@ -60,7 +70,9 @@ export function TrainJourneyCard({
   const destArrivalTime = train.arrTime || "--:--";
 
   // 4. Train name
-  const trainName = `KMRL-${train.displayId}`;
+  const trainName = train.id?.startsWith('BMRCL-')
+    ? train.id
+    : (train.displayId ? `KMRL-${train.displayId}` : (train.id || 'Metro Train'));
 
   return (
     <div
