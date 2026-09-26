@@ -23,7 +23,7 @@ export class ErrorBoundary extends React.Component {
               !
             </div>
             <h2 className="text-lg font-bold tracking-tight text-white">
-              Metro Radar
+              Metro Tracker
             </h2>
             <p className="text-xs text-slate-400 leading-relaxed">
               A temporary display error occurred while updating the map layout.
