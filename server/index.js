@@ -60,10 +60,12 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/trains', (req, res) => {
   const city = (req.query.city || 'kochi').toLowerCase();
+  const simulatedSeconds = req.query.simulatedSeconds ? parseInt(req.query.simulatedSeconds, 10) : null;
+  const simulatedDay = req.query.simulatedDay !== undefined ? parseInt(req.query.simulatedDay, 10) : null;
   if (city === 'bengaluru' || city === 'bangalore') {
-    return res.json(bangaloreEngine.getActiveTrains());
+    return res.json(bangaloreEngine.getActiveTrains(simulatedSeconds, simulatedDay));
   }
-  const data = engine.getActiveTrains();
+  const data = engine.getActiveTrains(simulatedSeconds);
   res.json(data);
 });
 

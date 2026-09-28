@@ -84,6 +84,8 @@ export class BangaloreEngine {
     this.purpleTrackCoords = [];
     this.greenTrackCoords = [];
     this.yellowTrackCoords = [];
+    this.weekdayTrips = [];
+    this.sundayTrips = [];
     this.isLoaded = false;
   }
 
@@ -126,238 +128,365 @@ export class BangaloreEngine {
         .filter((s) => s.line === 'yellow' || s.id === 'BLR-GRN-23')
         .sort((a, b) => BENGALURU_YELLOW_IDS.indexOf(a.id) - BENGALURU_YELLOW_IDS.indexOf(b.id));
 
+      this.buildDailySchedules();
       this.isLoaded = true;
       console.log(
         `[BangaloreEngine] Loaded ${this.stations.length} stations: ` +
-        `${this.purpleStations.length} Purple, ${this.greenStations.length} Green, ${this.yellowStations.length} Yellow`
+        `${this.purpleStations.length} Purple, ${this.greenStations.length} Green, ${this.yellowStations.length} Yellow | ` +
+        `${this.weekdayTrips.length} Weekday trips, ${this.sundayTrips.length} Sunday trips`
       );
     } catch (err) {
       console.error('[BangaloreEngine] Error loading GeoJSON:', err);
     }
   }
 
-  getActiveTrains() {
+  getActiveTrains(simulatedSeconds = null, simulatedDay = null) {
     if (!this.isLoaded) this.load();
 
     const now = new Date();
-    const istTimeStr = now.toLocaleTimeString('en-US', {
-      timeZone: 'Asia/Kolkata',
-      hour12: true,
-    });
-    const [hh, mm, ss] = now.toLocaleTimeString('en-US', {
-      timeZone: 'Asia/Kolkata',
-      hour12: false,
-    }).split(':').map(Number);
-    const timeSec = hh * 3600 + mm * 60 + ss;
+    let currentSec;
+    let istTimeStr;
 
-    const trains = [];
+    if (simulatedSeconds !== null) {
+      currentSec = simulatedSeconds;
+      const sh = Math.floor(currentSec / 3600);
+      const sm = Math.floor((currentSec % 3600) / 60);
+      const ss = currentSec % 60;
+      const d = new Date();
+      d.setHours(sh, sm, ss);
+      istTimeStr = d.toLocaleTimeString('en-US', {
+        hour12: true,
+      });
+    } else {
+      istTimeStr = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour12: true,
+      });
+      const [hh, mm, ss] = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour12: false,
+      }).split(':').map(Number);
+      currentSec = hh * 3600 + mm * 60 + ss;
+    }
 
-    // Helper: simulate a fleet of trains along a corridor with continuous physics-based ETAs
-    const simulateFleet = ({
-      lineKey,
-      lineName,
-      lineColor,
-      stationList,
-      trackCoords,
-      cycleSec,
-      totalLengthMeters,
-      trainDefs,
-    }) => {
-      const totalStops = stationList.length;
-      if (totalStops < 2 || !trackCoords.length) return;
-
-      for (const def of trainDefs) {
-        // Determine motion relative to line coordinates (index 0 -> index totalStops-1)
-        // Purple: dir 1 is Eastbound (0 -> totalStops-1)
-        // Green & Yellow: dir 0 is Southbound (0 -> totalStops-1)
-        const isForward = lineKey === 'purple' ? (def.dir === 1) : (def.dir === 0);
-
-        // Continuous progress from 0.0 to 1.0 along the line
-        const rawProgress = ((timeSec + def.offset) % cycleSec) / cycleSec;
-        const effectiveProgress = isForward ? rawProgress : (1 - rawProgress);
-        const isReversed = !isForward;
-
-        const pos = this.interpolateCoords(trackCoords, effectiveProgress, isReversed);
-        if (!pos) continue;
-
-        // Determine current position relative to station stops
-        const exactStop = effectiveProgress * (totalStops - 1);
-        let currStationIdx = 0;
-        let isDwelling = false;
-
-        if (isForward) {
-          // Forward: starts near 0 and moves to totalStops - 1
-          currStationIdx = Math.min(totalStops - 1, Math.floor(exactStop));
-          const subProgress = exactStop - currStationIdx;
-          // Dwell at station for first ~18% of inter-station slice (approx 22-25 seconds)
-          isDwelling = subProgress < 0.18;
-        } else {
-          // Reverse: starts near totalStops - 1 and moves to 0
-          currStationIdx = Math.max(0, Math.ceil(exactStop));
-          const subProgress = currStationIdx - exactStop;
-          isDwelling = subProgress < 0.18;
-        }
-
-        const currStation = stationList[currStationIdx] || stationList[0];
-
-        // Build remaining upcoming stops with continuous distance and ETA countdown
-        let remainingStationIndices = [];
-        if (isForward) {
-          const startIdx = isDwelling ? currStationIdx : currStationIdx + 1;
-          for (let k = startIdx; k < totalStops; k++) {
-            remainingStationIndices.push(k);
-          }
-        } else {
-          const startIdx = isDwelling ? currStationIdx : currStationIdx - 1;
-          for (let k = startIdx; k >= 0; k--) {
-            remainingStationIndices.push(k);
-          }
-        }
-
-        const remainingStops = remainingStationIndices.map((k, offsetIdx) => {
-          const st = stationList[k];
-          const stNominalProgress = k / (totalStops - 1);
-          const progressDelta = isForward
-            ? Math.max(0, stNominalProgress - effectiveProgress)
-            : Math.max(0, effectiveProgress - stNominalProgress);
-
-          const etaSec = isDwelling && offsetIdx === 0
-            ? 0
-            : Math.max(15, Math.round(progressDelta * cycleSec));
-
-          const distMeters = Math.max(0, Math.round(progressDelta * totalLengthMeters));
-
-          return {
-            stopId: st.id,
-            stopName: st.name,
-            etaSeconds: etaSec,
-            distanceMeters: distMeters,
-          };
-        });
-
-        const nextStop = remainingStops[0]
-          ? stationList.find((s) => s.id === remainingStops[0].stopId) || currStation
-          : currStation;
-
-        const originName = isForward
-          ? stationList[0].name
-          : stationList[totalStops - 1].name;
-
-        trains.push({
-          id: def.id,
-          displayId: def.id.replace('BMRCL-', ''),
-          line: lineKey,
-          lineName,
-          lineColor,
-          direction: def.dir,
-          directionId: def.dir,
-          origin: originName,
-          destination: def.dest,
-          lat: pos.lat,
-          lng: pos.lon,
-          bearing: pos.bearing,
-          speed: isDwelling ? 0 : 38,
-          isDwelling,
-          currentStation: isDwelling ? currStation.name : currStation.name,
-          nextStation: isDwelling ? currStation.name : nextStop.name,
-          nextStationId: isDwelling ? currStation.id : nextStop.id,
-          etaSeconds: remainingStops[0]?.etaSeconds || 0,
-          remainingStops,
-          status: isDwelling ? `At ${currStation.name} Platform` : `Approaching ${nextStop.name}`,
-        });
+    // Determine current and tomorrow's day of week in Asia/Kolkata
+    let istDay;
+    if (simulatedDay !== null && simulatedDay !== undefined) {
+      if (typeof simulatedDay === 'number' || !isNaN(Number(simulatedDay))) {
+        const dayIdx = Number(simulatedDay) % 7;
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        istDay = days[dayIdx];
+      } else {
+        const s = String(simulatedDay).trim();
+        istDay = s.charAt(0).toUpperCase() + s.slice(1, 3).toLowerCase();
       }
-    };
+    } else {
+      istDay = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        weekday: 'short',
+      }).format(now);
+    }
+    const isSunday = istDay === 'Sun';
 
-    // 1. Purple Line Fleet: 12 trains (6 Eastbound to Whitefield, 6 Westbound to Challaghatta)
-    // 4500s cycle time (~75 min one-way, ~12.5 min headway per direction)
-    const purpleCycleSec = 4500;
-    const purpleTrainDefs = [
-      { id: 'BMRCL-P01', offset: 0, dir: 1, dest: 'Whitefield (Kadugodi)' },
-      { id: 'BMRCL-P02', offset: 750, dir: 1, dest: 'Whitefield (Kadugodi)' },
-      { id: 'BMRCL-P03', offset: 1500, dir: 1, dest: 'Whitefield (Kadugodi)' },
-      { id: 'BMRCL-P04', offset: 2250, dir: 1, dest: 'Whitefield (Kadugodi)' },
-      { id: 'BMRCL-P05', offset: 3000, dir: 1, dest: 'Whitefield (Kadugodi)' },
-      { id: 'BMRCL-P06', offset: 3750, dir: 1, dest: 'Whitefield (Kadugodi)' },
-      { id: 'BMRCL-P07', offset: 375, dir: 0, dest: 'Challaghatta' },
-      { id: 'BMRCL-P08', offset: 1125, dir: 0, dest: 'Challaghatta' },
-      { id: 'BMRCL-P09', offset: 1875, dir: 0, dest: 'Challaghatta' },
-      { id: 'BMRCL-P10', offset: 2625, dir: 0, dest: 'Challaghatta' },
-      { id: 'BMRCL-P11', offset: 3375, dir: 0, dest: 'Challaghatta' },
-      { id: 'BMRCL-P12', offset: 4125, dir: 0, dest: 'Challaghatta' },
-    ];
+    const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
+    const isTomorrowSunday = simulatedDay !== null && simulatedDay !== undefined
+      ? istDay === 'Sat'
+      : new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Kolkata',
+          weekday: 'short',
+        }).format(tomorrow) === 'Sun';
 
-    simulateFleet({
-      lineKey: 'purple',
-      lineName: 'Purple Line',
-      lineColor: '#A855F7',
-      stationList: this.purpleStations,
-      trackCoords: this.purpleTrackCoords,
-      cycleSec: purpleCycleSec,
-      totalLengthMeters: 43490,
-      trainDefs: purpleTrainDefs,
-    });
+    // Official BMRCL Bangalore Metro Timetable bounds
+    const todayOpenSec = isSunday ? 7 * 3600 : 5 * 3600;
+    const isEarlyMorning = currentSec < todayOpenSec;
 
-    // 2. Green Line Fleet: 10 trains (5 Northbound to Madavara, 5 Southbound to Silk Institute)
-    // 3900s cycle time (~65 min one-way, ~13 min headway per direction)
-    const greenCycleSec = 3900;
-    const greenTrainDefs = [
-      { id: 'BMRCL-G01', offset: 0, dir: 1, dest: 'Madavara (BIEC)' },
-      { id: 'BMRCL-G02', offset: 780, dir: 1, dest: 'Madavara (BIEC)' },
-      { id: 'BMRCL-G03', offset: 1560, dir: 1, dest: 'Madavara (BIEC)' },
-      { id: 'BMRCL-G04', offset: 2340, dir: 1, dest: 'Madavara (BIEC)' },
-      { id: 'BMRCL-G05', offset: 3120, dir: 1, dest: 'Madavara (BIEC)' },
-      { id: 'BMRCL-G06', offset: 390, dir: 0, dest: 'Silk Institute' },
-      { id: 'BMRCL-G07', offset: 1170, dir: 0, dest: 'Silk Institute' },
-      { id: 'BMRCL-G08', offset: 1950, dir: 0, dest: 'Silk Institute' },
-      { id: 'BMRCL-G09', offset: 2730, dir: 0, dest: 'Silk Institute' },
-      { id: 'BMRCL-G10', offset: 3510, dir: 0, dest: 'Silk Institute' },
-    ];
+    const opensAt = isEarlyMorning
+      ? (isSunday ? '07:00 AM' : '05:00 AM')
+      : (isTomorrowSunday ? '07:00 AM' : '05:00 AM');
 
-    simulateFleet({
-      lineKey: 'green',
-      lineName: 'Green Line',
-      lineColor: '#10B981',
-      stationList: this.greenStations,
-      trackCoords: this.greenTrackCoords,
-      cycleSec: greenCycleSec,
-      totalLengthMeters: 33460,
-      trainDefs: greenTrainDefs,
-    });
+    const nextServiceText = isEarlyMorning
+      ? `Opens today at ${opensAt} IST`
+      : `Opens tomorrow at ${opensAt} IST`;
 
-    // 3. Yellow Line Fleet: 8 trains (4 Northbound to RV Road, 4 Southbound to Bommasandra)
-    // 1920s cycle time (~32 min one-way, ~8 min headway per direction)
-    const yellowCycleSec = 1920;
-    const yellowTrainDefs = [
-      { id: 'BMRCL-Y01', offset: 0, dir: 1, dest: 'Rashtreeya Vidyalaya Road (RV Road)' },
-      { id: 'BMRCL-Y02', offset: 480, dir: 1, dest: 'Rashtreeya Vidyalaya Road (RV Road)' },
-      { id: 'BMRCL-Y03', offset: 960, dir: 1, dest: 'Rashtreeya Vidyalaya Road (RV Road)' },
-      { id: 'BMRCL-Y04', offset: 1440, dir: 1, dest: 'Rashtreeya Vidyalaya Road (RV Road)' },
-      { id: 'BMRCL-Y05', offset: 240, dir: 0, dest: 'Delta Electronics Bommasandra' },
-      { id: 'BMRCL-Y06', offset: 720, dir: 0, dest: 'Delta Electronics Bommasandra' },
-      { id: 'BMRCL-Y07', offset: 1200, dir: 0, dest: 'Delta Electronics Bommasandra' },
-      { id: 'BMRCL-Y08', offset: 1680, dir: 0, dest: 'Delta Electronics Bommasandra' },
-    ];
+    // Retrieve today's scheduled timetable
+    const tripSchedule = isSunday ? this.sundayTrips : this.weekdayTrips;
 
-    simulateFleet({
-      lineKey: 'yellow',
-      lineName: 'Yellow Line',
-      lineColor: '#EAB308',
-      stationList: this.yellowStations,
-      trackCoords: this.yellowTrackCoords,
-      cycleSec: yellowCycleSec,
-      totalLengthMeters: 19150,
-      trainDefs: yellowTrainDefs,
-    });
+    // Filter trains that are physically in transit right now (depSec <= currentSec < arrSec)
+    // If it's before the first departure of the day or after the final train has arrived at its terminal, activeTrips is []
+    const activeTrips = isEarlyMorning
+      ? []
+      : tripSchedule.filter((t) => currentSec >= t.depSec && currentSec < t.arrSec);
+
+    const isOpen = activeTrips.length > 0;
+
+    // Off-Hours Policy: Do NOT mock or simulate fleet movements when closed
+    if (!isOpen) {
+      return {
+        timestamp: now.toISOString(),
+        istTime: istTimeStr,
+        isSimulatedClock: simulatedSeconds !== null,
+        isOpen: false,
+        serviceStatus: 'closed',
+        opensAt,
+        nextServiceText,
+        activeTrainsCount: 0,
+        trains: [],
+      };
+    }
+
+    const trains = this.resolveActiveTrips(activeTrips, currentSec);
 
     return {
+      timestamp: now.toISOString(),
       istTime: istTimeStr,
-      isSimulatedClock: false,
+      isSimulatedClock: simulatedSeconds !== null,
       isOpen: true,
       serviceStatus: 'open',
-      opensAt: '05:00 AM',
+      opensAt,
+      nextServiceText: 'Normal Service',
       activeTrainsCount: trains.length,
       trains,
     };
+  }
+
+  buildDailySchedules() {
+    const pad = (n) => String(n).padStart(2, '0');
+    const formatHHMM = (sec) => {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      return `${pad(h)}${pad(m)}`;
+    };
+
+    const makeSchedule = (isSunday) => {
+      const trips = [];
+      const lines = [
+        {
+          key: 'purple',
+          name: 'Purple Line',
+          color: '#A855F7',
+          stations: this.purpleStations,
+          trackCoords: this.purpleTrackCoords,
+          durationSec: 4500, // 75 mins
+          totalLengthMeters: 43490,
+          headways: isSunday
+            ? [{ start: 7, end: 23, headwayMin: 12 }]
+            : [
+                { start: 5, end: 7.5, headwayMin: 15 },
+                { start: 7.5, end: 11.5, headwayMin: 7.5 },
+                { start: 11.5, end: 16.5, headwayMin: 11 },
+                { start: 16.5, end: 20.5, headwayMin: 7.5 },
+                { start: 20.5, end: 23, headwayMin: 15 },
+              ],
+          dest1: this.purpleStations[this.purpleStations.length - 1]?.name || 'Whitefield (Kadugodi)',
+          dest0: this.purpleStations[0]?.name || 'Challaghatta',
+          origin1: this.purpleStations[0]?.name || 'Challaghatta',
+          origin0: this.purpleStations[this.purpleStations.length - 1]?.name || 'Whitefield (Kadugodi)',
+        },
+        {
+          key: 'green',
+          name: 'Green Line',
+          color: '#10B981',
+          stations: this.greenStations,
+          trackCoords: this.greenTrackCoords,
+          durationSec: 3900, // 65 mins
+          totalLengthMeters: 33460,
+          headways: isSunday
+            ? [{ start: 7, end: 23, headwayMin: 12 }]
+            : [
+                { start: 5, end: 7.5, headwayMin: 15 },
+                { start: 7.5, end: 11.5, headwayMin: 8.5 },
+                { start: 11.5, end: 16.5, headwayMin: 12 },
+                { start: 16.5, end: 20.5, headwayMin: 8.5 },
+                { start: 20.5, end: 23, headwayMin: 15 },
+              ],
+          dest1: this.greenStations[0]?.name || 'Madavara (BIEC)',
+          dest0: this.greenStations[this.greenStations.length - 1]?.name || 'Silk Institute',
+          origin1: this.greenStations[this.greenStations.length - 1]?.name || 'Silk Institute',
+          origin0: this.greenStations[0]?.name || 'Madavara (BIEC)',
+        },
+        {
+          key: 'yellow',
+          name: 'Yellow Line',
+          color: '#EAB308',
+          stations: this.yellowStations,
+          trackCoords: this.yellowTrackCoords,
+          durationSec: 1980, // 33 mins
+          totalLengthMeters: 19150,
+          headways: isSunday
+            ? [{ start: 7, end: 23, headwayMin: 15 }]
+            : [
+                { start: 5, end: 7.5, headwayMin: 15 },
+                { start: 7.5, end: 11.5, headwayMin: 10 },
+                { start: 11.5, end: 16.5, headwayMin: 14 },
+                { start: 16.5, end: 20.5, headwayMin: 10 },
+                { start: 20.5, end: 23, headwayMin: 15 },
+              ],
+          dest1: this.yellowStations[0]?.name || 'Rashtreeya Vidyalaya Road (RV Road)',
+          dest0: this.yellowStations[this.yellowStations.length - 1]?.name || 'Delta Electronics Bommasandra',
+          origin1: this.yellowStations[this.yellowStations.length - 1]?.name || 'Delta Electronics Bommasandra',
+          origin0: this.yellowStations[0]?.name || 'Rashtreeya Vidyalaya Road (RV Road)',
+        },
+      ];
+
+      for (const line of lines) {
+        for (const hw of line.headways) {
+          const stepSec = Math.round(hw.headwayMin * 60);
+          const startSec = Math.round(hw.start * 3600);
+          const endSec = Math.round(hw.end * 3600);
+
+          for (let dep = startSec; dep <= endSec; dep += stepSec) {
+            const timeTag = formatHHMM(dep);
+            const prefix = line.key.charAt(0).toUpperCase();
+
+            // Direction 1
+            trips.push({
+              id: `BMRCL-${prefix}1-${timeTag}`,
+              displayId: `${prefix}1-${timeTag.slice(0, 2)}:${timeTag.slice(2)}`,
+              lineKey: line.key,
+              lineName: line.name,
+              lineColor: line.color,
+              dir: 1,
+              depSec: dep,
+              arrSec: dep + line.durationSec,
+              durationSec: line.durationSec,
+              totalLengthMeters: line.totalLengthMeters,
+              stationList: line.stations,
+              trackCoords: line.trackCoords,
+              origin: line.origin1,
+              destination: line.dest1,
+            });
+
+            // Direction 0
+            trips.push({
+              id: `BMRCL-${prefix}0-${timeTag}`,
+              displayId: `${prefix}0-${timeTag.slice(0, 2)}:${timeTag.slice(2)}`,
+              lineKey: line.key,
+              lineName: line.name,
+              lineColor: line.color,
+              dir: 0,
+              depSec: dep,
+              arrSec: dep + line.durationSec,
+              durationSec: line.durationSec,
+              totalLengthMeters: line.totalLengthMeters,
+              stationList: line.stations,
+              trackCoords: line.trackCoords,
+              origin: line.origin0,
+              destination: line.dest0,
+            });
+          }
+        }
+      }
+      return trips;
+    };
+
+    this.weekdayTrips = makeSchedule(false);
+    this.sundayTrips = makeSchedule(true);
+  }
+
+  resolveActiveTrips(activeTrips, currentSec) {
+    const trains = [];
+
+    for (const trip of activeTrips) {
+      const stationList = trip.stationList;
+      const trackCoords = trip.trackCoords;
+      const totalStops = stationList.length;
+      if (totalStops < 2 || !trackCoords || !trackCoords.length) continue;
+
+      // Determine motion relative to line coordinates (index 0 -> index totalStops-1)
+      // Purple: dir 1 is Eastbound (0 -> totalStops-1)
+      // Green & Yellow: dir 0 is Southbound (0 -> totalStops-1)
+      const isForward = trip.lineKey === 'purple' ? (trip.dir === 1) : (trip.dir === 0);
+
+      // Continuous progress from 0.0 to 1.0 along the line based on elapsed time since departure
+      const elapsedSec = currentSec - trip.depSec;
+      const rawProgress = Math.max(0, Math.min(1, elapsedSec / trip.durationSec));
+      const effectiveProgress = isForward ? rawProgress : (1 - rawProgress);
+      const isReversed = !isForward;
+
+      const pos = this.interpolateCoords(trackCoords, effectiveProgress, isReversed);
+      if (!pos) continue;
+
+      // Determine current position relative to station stops
+      const exactStop = effectiveProgress * (totalStops - 1);
+      let currStationIdx = 0;
+      let isDwelling = false;
+
+      if (isForward) {
+        currStationIdx = Math.min(totalStops - 1, Math.floor(exactStop));
+        const subProgress = exactStop - currStationIdx;
+        isDwelling = subProgress < 0.18;
+      } else {
+        currStationIdx = Math.max(0, Math.ceil(exactStop));
+        const subProgress = currStationIdx - exactStop;
+        isDwelling = subProgress < 0.18;
+      }
+
+      const currStation = stationList[currStationIdx] || stationList[0];
+
+      // Build remaining upcoming stops with continuous distance and ETA countdown
+      let remainingStationIndices = [];
+      if (isForward) {
+        const startIdx = isDwelling ? currStationIdx : currStationIdx + 1;
+        for (let k = startIdx; k < totalStops; k++) {
+          remainingStationIndices.push(k);
+        }
+      } else {
+        const startIdx = isDwelling ? currStationIdx : currStationIdx - 1;
+        for (let k = startIdx; k >= 0; k--) {
+          remainingStationIndices.push(k);
+        }
+      }
+
+      const remainingStops = remainingStationIndices.map((k, offsetIdx) => {
+        const st = stationList[k];
+        const stNominalProgress = k / (totalStops - 1);
+        const progressDelta = isForward
+          ? Math.max(0, stNominalProgress - effectiveProgress)
+          : Math.max(0, effectiveProgress - stNominalProgress);
+
+        const etaSec = isDwelling && offsetIdx === 0
+          ? 0
+          : Math.max(15, Math.round(progressDelta * trip.durationSec));
+
+        const distMeters = Math.max(0, Math.round(progressDelta * trip.totalLengthMeters));
+
+        return {
+          stopId: st.id,
+          stopName: st.name,
+          etaSeconds: etaSec,
+          distanceMeters: distMeters,
+        };
+      });
+
+      const nextStop = remainingStops[0]
+        ? stationList.find((s) => s.id === remainingStops[0].stopId) || currStation
+        : currStation;
+
+      trains.push({
+        id: trip.id,
+        displayId: trip.displayId,
+        line: trip.lineKey,
+        lineName: trip.lineName,
+        lineColor: trip.lineColor,
+        direction: trip.dir,
+        directionId: trip.dir,
+        origin: trip.origin,
+        destination: trip.destination,
+        lat: pos.lat,
+        lng: pos.lon,
+        bearing: pos.bearing,
+        speed: isDwelling ? 0 : 38,
+        isDwelling,
+        currentStation: currStation.name,
+        nextStation: isDwelling ? currStation.name : nextStop.name,
+        nextStationId: isDwelling ? currStation.id : nextStop.id,
+        etaSeconds: remainingStops[0]?.etaSeconds || 0,
+        remainingStops,
+        status: isDwelling ? `At ${currStation.name} Platform` : `Approaching ${nextStop.name}`,
+      });
+    }
+
+    return trains;
   }
 
   interpolateCoords(coords, ratio, isReversed = false) {
@@ -459,6 +588,15 @@ export class BangaloreEngine {
 
     const rideMinutes = Math.max(2, Math.round(hops * 2.1));
 
+    // Official operating timetable bounds
+    const istDay = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short',
+    }).format(now);
+    const isSunday = istDay === 'Sun';
+    const todayOpenSec = isSunday ? 7 * 3600 : 5 * 3600;
+    const todayCloseSec = 23 * 3600;
+
     // Calculate base time from queryTime (HH:MM or HH:MM:SS) in Asia/Kolkata context
     let baseTimeMs = now.getTime();
     if (queryTime && typeof queryTime === 'string' && queryTime.includes(':')) {
@@ -475,12 +613,50 @@ export class BangaloreEngine {
       const curSec = curH * 3600 + curM * 60 + (curS || 0);
       const targetSec = targetH * 3600 + targetM * 60;
 
-      let deltaSec = targetSec - curSec;
+      let effectiveTargetSec = targetSec;
+      if (targetSec < todayOpenSec) {
+        // Query time is during early morning off-hours -> snap to opening time
+        effectiveTargetSec = todayOpenSec;
+      } else if (targetSec >= todayCloseSec) {
+        // Query time is after night closure -> snap to tomorrow opening time
+        const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
+        const isTomorrowSunday = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Kolkata',
+          weekday: 'short',
+        }).format(tomorrow) === 'Sun';
+        const tomorrowOpenSec = isTomorrowSunday ? 7 * 3600 : 5 * 3600;
+        effectiveTargetSec = 86400 + tomorrowOpenSec;
+      }
+
+      let deltaSec = effectiveTargetSec - curSec;
       if (deltaSec < -120) {
         // Target time has already passed today by more than 2 minutes -> schedule for next day
         deltaSec += 86400;
       }
       baseTimeMs = now.getTime() + deltaSec * 1000;
+    } else {
+      // If no custom query time and metro is currently closed, schedule from next resumption time
+      const [curH, curM, curS] = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour12: false,
+      }).split(':').map(Number);
+      const curSec = curH * 3600 + curM * 60 + (curS || 0);
+
+      if (curSec < todayOpenSec) {
+        // Early morning before opening: base departures start at today's opening time
+        const waitSec = todayOpenSec - curSec;
+        baseTimeMs = now.getTime() + waitSec * 1000;
+      } else if (curSec >= todayCloseSec) {
+        // Night after 11:00 PM: base departures start at tomorrow's opening time
+        const tomorrow = new Date(now.getTime() + 24 * 3600 * 1000);
+        const isTomorrowSunday = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Kolkata',
+          weekday: 'short',
+        }).format(tomorrow) === 'Sun';
+        const tomorrowOpenSec = isTomorrowSunday ? 7 * 3600 : 5 * 3600;
+        const waitSec = (86400 - curSec) + tomorrowOpenSec;
+        baseTimeMs = now.getTime() + waitSec * 1000;
+      }
     }
 
     for (let i = 0; i < count; i++) {

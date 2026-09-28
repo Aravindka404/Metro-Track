@@ -149,6 +149,12 @@ export function NetworkView() {
     saveTheme(nextTheme);
   };
 
+  const isLocalDev =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      ['3000', '3001', '5173'].includes(window.location.port));
+
   // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 768
@@ -273,12 +279,6 @@ export function NetworkView() {
     const originId = currentStation.id;
     const destId = destinationStation.id;
     const timeParam = selectedTime ? `&time=${selectedTime}` : '';
-
-    const isLocalDev =
-      typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        ['3000', '3001', '5173'].includes(window.location.port));
 
     const apiBase =
       import.meta.env.VITE_BACKEND_URL ||
@@ -1062,7 +1062,7 @@ export function NetworkView() {
             >
               <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]" />
               <span className="font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase">
-                Opens {opensAt || '06:00 AM'}
+                Opens {opensAt || cityConfig?.opensAt || '05:00 AM'}
               </span>
             </div>
           )}
@@ -1399,13 +1399,22 @@ export function NetworkView() {
                     <Moon size={15} className={`shrink-0 mt-0.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                     <div className="flex flex-col gap-0.5">
                       <span className={`font-sans font-bold ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
-                        Service Closed for the Night
+                        Service Currently Closed
                       </span>
                       <span className={`text-[11px] leading-relaxed ${isLight ? 'text-amber-800' : 'text-slate-300'}`}>
-                        {currentCity === 'bengaluru' ? 'Namma Metro' : 'Kochi Metro'} trains have concluded operations for today. Tomorrow's morning services resume at{' '}
-                        <strong className={isLight ? 'text-amber-950 font-bold' : 'text-white font-semibold'}>
-                          {opensAt || '06:00 AM'} IST
-                        </strong>.
+                        {currentCity === 'bengaluru' ? 'Namma Metro' : 'Kochi Metro'} trains are currently off-duty.{' '}
+                        {nextServiceText ? (
+                          <strong className={isLight ? 'text-amber-950 font-bold' : 'text-white font-semibold'}>
+                            {nextServiceText}.
+                          </strong>
+                        ) : (
+                          <>
+                            Morning services resume at{' '}
+                            <strong className={isLight ? 'text-amber-950 font-bold' : 'text-white font-semibold'}>
+                              {opensAt || cityConfig?.opensAt || '05:00 AM'} IST
+                            </strong>.
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1512,7 +1521,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -1557,7 +1566,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -1610,7 +1619,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -1655,7 +1664,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -1711,7 +1720,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -1756,7 +1765,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -1809,7 +1818,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -1907,7 +1916,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>
@@ -2002,7 +2011,7 @@ export function NetworkView() {
                             </div>
                           ) : (
                             <span className={`text-[11px] py-1 text-center ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || '06:00 AM'}`}
+                              {isOpen ? 'No approaching trains' : `Service opens at ${opensAt || cityConfig?.opensAt || '05:00 AM'}`}
                             </span>
                           )}
                         </div>

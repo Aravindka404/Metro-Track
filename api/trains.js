@@ -23,14 +23,16 @@ function getBangaloreEngine() {
 export default function handler(req, res) {
   try {
     const city = (req.query?.city || 'kochi').toLowerCase();
+    const simulatedSeconds = req.query?.simulatedSeconds ? parseInt(req.query.simulatedSeconds, 10) : null;
+    const simulatedDay = req.query?.simulatedDay !== undefined ? parseInt(req.query.simulatedDay, 10) : null;
     let data;
 
     if (city === 'bengaluru' || city === 'bangalore') {
       const engine = getBangaloreEngine();
-      data = engine.getActiveTrains();
+      data = engine.getActiveTrains(simulatedSeconds, simulatedDay);
     } else {
       const engine = getKochiEngine();
-      data = engine.getActiveTrains();
+      data = engine.getActiveTrains(simulatedSeconds);
     }
 
     res.setHeader('Access-Control-Allow-Origin', '*');

@@ -20,7 +20,7 @@ export function StationProvider({ children }) {
   const [isSimulated, setIsSimulated] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
   const [serviceStatus, setServiceStatus] = useState('open');
-  const [opensAt, setOpensAt] = useState('06:00 AM');
+  const [opensAt, setOpensAt] = useState(() => cityConfig?.opensAt || '05:00 AM');
   const [nextServiceText, setNextServiceText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [stations, setStations] = useState(() => getCityStations(currentCity));
@@ -115,6 +115,7 @@ export function StationProvider({ children }) {
     setTracksGeoJSON(nextTracks);
     setActiveStation(nextStations[0] || null);
     setNearestStation(null);
+    setOpensAt(CITIES[currentCity]?.opensAt || '05:00 AM');
 
     // Apply cached payload for this city if available, otherwise immediately fetch
     if (latestPayloadsRef.current[currentCity]) {
@@ -186,6 +187,7 @@ export function StationProvider({ children }) {
 
       // City-specific real-time updates
       socket.on('trains:update', (payload) => {
+        if (previewOffHoursRef.current) return;
         latestPayloadsRef.current.kochi = payload;
         if (currentCityRef.current === 'kochi') {
           applyPayload(payload, 'kochi');
